@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OpenMod.API.Plugins;
 using SDG.Unturned;
 using TerritoryPlugin.Models;
 using UnityEngine;
@@ -12,9 +14,12 @@ namespace TerritoryPlugin.Services
 {
     public class CaptureZoneService
     {
+        private const string FactionScoresDataKey = "faction_scores";
+
         private readonly TerritoryService m_TerritoryService;
         private readonly ILogger<CaptureZoneService> m_Logger;
         private readonly float m_ScoringDurationSeconds;
+        private readonly Lazy<IPluginAccessor<TerritoryPlugin>> m_PluginAccessor;
 
         private readonly Dictionary<ulong, Territory?> m_PlayerTerritories =
             new Dictionary<ulong, Territory?>();
@@ -31,13 +36,18 @@ namespace TerritoryPlugin.Services
         public IReadOnlyDictionary<string, int> FactionRewards =>
             m_FactionRewards;
 
+        public float ScoringDurationSeconds =>
+            m_ScoringDurationSeconds;
+
         public CaptureZoneService(
             TerritoryService territoryService,
             IConfiguration configuration,
+            Lazy<IPluginAccessor<TerritoryPlugin>> pluginAccessor,
             ILogger<CaptureZoneService> logger)
         {
             m_TerritoryService = territoryService;
             m_Logger = logger;
+            m_PluginAccessor = pluginAccessor;
             m_ScoringDurationSeconds = configuration.GetValue(
                 "capture_zones:scoring_duration_seconds",
                 60f);
@@ -53,6 +63,8 @@ namespace TerritoryPlugin.Services
         {
             m_Logger.LogInformation(
                 "CaptureZoneService started.");
+
+            await LoadFactionRewardsAsync();
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -169,6 +181,51 @@ namespace TerritoryPlugin.Services
             }
         }
 
+        public CaptureZoneRuntime? GetCaptureZoneAt(float x, float z)
+        {
+            foreach (CaptureZoneRuntime zone in m_CaptureZones)
+            {
+                float dx = x - zone.Definition.X;
+                float dz = z - zone.Definition.Z;
+
+                if ((dx * dx) + (dz * dz) <=
+                    zone.Definition.Radius * zone.Definition.Radius)
+                {
+                    return zone;
+                }
+            }
+
+            return null;
+        }
+
+        public IReadOnlyList<KeyValuePair<string, int>> GetFactionLeaderboard(
+            int maximumEntries = 5)
+        {
+            return m_FactionRewards
+                .OrderByDescending(faction => faction.Value)
+                .ThenBy(faction => faction.Key)
+                .Take(maximumEntries)
+                .ToArray();
+        }
+
+        public IReadOnlyList<KeyValuePair<string, int>> GetZoneLeaderboard(
+            CaptureZoneRuntime zone,
+            int maximumEntries = 5)
+        {
+            return zone.FactionScores
+                .OrderByDescending(faction => faction.Value)
+                .ThenBy(faction => faction.Key)
+                .Take(maximumEntries)
+                .ToArray();
+        }
+
+        public float GetRemainingSeconds(CaptureZoneRuntime zone)
+        {
+            return Math.Max(
+                0f,
+                m_ScoringDurationSeconds - zone.ElapsedSeconds);
+        }
+
         private void UpdateZone(
             CaptureZoneRuntime zone,
             IReadOnlyDictionary<string, int> playersPerFaction,
@@ -253,12 +310,59 @@ namespace TerritoryPlugin.Services
             m_FactionRewards[leadingFaction] = currentReward +
                 zone.Definition.Weight;
 
+            SaveFactionRewardsAsync().Forget();
+
             m_Logger.LogInformation(
                 "{Faction} won {Zone} with {Score} player-seconds and earned {Reward} faction points.",
                 leadingFaction,
                 zone.Definition.Name,
                 leadingScore,
                 zone.Definition.Weight);
+        }
+
+        private async UniTask LoadFactionRewardsAsync()
+        {
+            TerritoryPlugin? plugin = m_PluginAccessor.Value.Instance;
+
+            if (plugin == null ||
+                !await plugin.DataStore.ExistsAsync(FactionScoresDataKey))
+            {
+                return;
+            }
+
+            FactionScoreData? savedScores = await plugin.DataStore
+                .LoadAsync<FactionScoreData>(FactionScoresDataKey);
+
+            if (savedScores == null)
+            {
+                return;
+            }
+
+            foreach (KeyValuePair<string, int> score in savedScores.Scores)
+            {
+                m_FactionRewards[score.Key] = score.Value;
+            }
+
+            m_Logger.LogInformation(
+                "Loaded scores for {FactionCount} factions.",
+                m_FactionRewards.Count);
+        }
+
+        private async UniTask SaveFactionRewardsAsync()
+        {
+            TerritoryPlugin? plugin = m_PluginAccessor.Value.Instance;
+
+            if (plugin == null)
+            {
+                return;
+            }
+
+            await plugin.DataStore.SaveAsync(
+                FactionScoresDataKey,
+                new FactionScoreData
+                {
+                    Scores = new Dictionary<string, int>(m_FactionRewards)
+                });
         }
     }
 }

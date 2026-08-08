@@ -35,12 +35,88 @@ namespace TerritoryPlugin.Commands
             if (Context.Parameters.Length == 0)
             {
                 await player.PrintMessageAsync(
-                    "Usage: /territory claim|info");
+                    "Usage: /territory claim|info|status|leaderboard");
 
                 return;
             }
 
             string action = Context.Parameters[0].ToLower();
+
+            if (action == "leaderboard")
+            {
+                var leaderboard =
+                    m_CaptureZoneService.GetFactionLeaderboard();
+
+                if (leaderboard.Count == 0)
+                {
+                    await player.PrintMessageAsync(
+                        "No faction points have been awarded yet.");
+
+                    return;
+                }
+
+                await player.PrintMessageAsync("Faction leaderboard:");
+
+                int rank = 1;
+
+                foreach (var faction in leaderboard)
+                {
+                    await player.PrintMessageAsync(
+                        $"{rank}. Group {faction.Key}: {faction.Value} points");
+
+                    rank++;
+                }
+
+                return;
+            }
+
+            if (action == "status")
+            {
+                Vector3 position =
+                    player.Player.Player.transform.position;
+
+                CaptureZoneRuntime? zone =
+                    m_CaptureZoneService.GetCaptureZoneAt(
+                        position.x,
+                        position.z);
+
+                if (zone == null)
+                {
+                    await player.PrintMessageAsync(
+                        "You are not inside a capture zone.");
+
+                    return;
+                }
+
+                await player.PrintMessageAsync(
+                    $"{zone.Definition.Name}: " +
+                    $"{m_CaptureZoneService.GetRemainingSeconds(zone):F0}s remaining");
+
+                var leaderboard =
+                    m_CaptureZoneService.GetZoneLeaderboard(zone, 3);
+
+                if (leaderboard.Count == 0)
+                {
+                    await player.PrintMessageAsync(
+                        "No group has scored in this zone yet.");
+
+                    return;
+                }
+
+                await player.PrintMessageAsync("Zone leaderboard:");
+
+                int rank = 1;
+
+                foreach (var faction in leaderboard)
+                {
+                    await player.PrintMessageAsync(
+                        $"{rank}. Group {faction.Key}: {faction.Value} score");
+
+                    rank++;
+                }
+
+                return;
+            }
 
             //territory claim
             if (action == "claim")
@@ -133,7 +209,7 @@ namespace TerritoryPlugin.Commands
             }
 
             await player.PrintMessageAsync(
-                "Unknown subcommand. Use /territory claim|info");
+                "Unknown subcommand. Use /territory claim|info|status|leaderboard");
         }
     }
 }
