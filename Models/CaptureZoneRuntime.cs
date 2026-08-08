@@ -1,11 +1,11 @@
+using System.Collections.Generic;
+
 namespace TerritoryPlugin.Models
 {
     public enum CaptureState
     {
-        Neutral,
-        Capturing,
-        Contested,
-        Controlled
+        Scoring,
+        Finished
     }
 
     public class CaptureZoneRuntime
@@ -17,12 +17,15 @@ namespace TerritoryPlugin.Models
 
         public CaptureZone Definition { get; }
 
-        public CaptureState State { get; set; } = CaptureState.Neutral;
+        public CaptureState State { get; set; } = CaptureState.Scoring;
 
-        public string? OwnerFactionId { get; set; }
+        public float ElapsedSeconds { get; set; }
 
-        public string? CapturingFactionId { get; set; }
+        public float ScoreTickAccumulator { get; set; }
 
-        public float Progress { get; set; }
+        public Dictionary<string, int> FactionScores { get; } =
+            new Dictionary<string, int>();
+
+        public string? WinningFactionId { get; set; }
     }
 }

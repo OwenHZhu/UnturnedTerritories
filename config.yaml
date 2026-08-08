@@ -1,2 +1,3 @@
-# See https://openmod.github.io/openmod-docs/devdoc/concepts/configuration.html
-# You can delete this file if you do not need a configuration
+# Length of each capture-zone scoring round.
+capture_zones:
+  scoring_duration_seconds: 60

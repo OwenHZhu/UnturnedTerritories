@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Linq;
 using Cysharp.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SDG.Unturned;
 using TerritoryPlugin.Models;
@@ -14,6 +14,7 @@ namespace TerritoryPlugin.Services
     {
         private readonly TerritoryService m_TerritoryService;
         private readonly ILogger<CaptureZoneService> m_Logger;
+        private readonly float m_ScoringDurationSeconds;
 
         private readonly Dictionary<ulong, Territory?> m_PlayerTerritories =
             new Dictionary<ulong, Territory?>();
@@ -21,15 +22,30 @@ namespace TerritoryPlugin.Services
         private readonly List<CaptureZoneRuntime> m_CaptureZones =
             new List<CaptureZoneRuntime>();
 
+        private readonly Dictionary<string, int> m_FactionRewards =
+            new Dictionary<string, int>();
+
         public IReadOnlyList<CaptureZoneRuntime> CaptureZones =>
             m_CaptureZones;
 
+        public IReadOnlyDictionary<string, int> FactionRewards =>
+            m_FactionRewards;
+
         public CaptureZoneService(
             TerritoryService territoryService,
+            IConfiguration configuration,
             ILogger<CaptureZoneService> logger)
         {
             m_TerritoryService = territoryService;
             m_Logger = logger;
+            m_ScoringDurationSeconds = configuration.GetValue(
+                "capture_zones:scoring_duration_seconds",
+                60f);
+
+            if (m_ScoringDurationSeconds <= 0f)
+            {
+                m_ScoringDurationSeconds = 60f;
+            }
         }
 
         public async UniTask StartAsync(
@@ -54,18 +70,24 @@ namespace TerritoryPlugin.Services
             m_CaptureZones.Add(runtime);
 
             m_Logger.LogInformation(
-                "Capture zone {Zone} created at {X:F1}, {Z:F1} with a {Radius:F0}m radius.",
+                "Capture zone {Zone} created at {X:F1}, {Z:F1} with a {Radius:F0}m radius. " +
+                "Scoring ends in {Duration:F0} seconds.",
                 captureZone.Name,
                 captureZone.X,
                 captureZone.Z,
-                captureZone.Radius);
+                captureZone.Radius,
+                m_ScoringDurationSeconds);
 
             return runtime;
         }
 
-        private static string GetFactionId(SteamPlayer player)
+        private static string? GetFactionId(SteamPlayer player)
         {
-            return player.playerID.steamID.m_SteamID.ToString();
+            ulong groupId = player.playerID.group.m_SteamID;
+
+            return groupId == 0
+                ? null
+                : groupId.ToString();
         }
 
         private void CheckPlayers()
@@ -117,7 +139,7 @@ namespace TerritoryPlugin.Services
         {
             foreach (CaptureZoneRuntime zone in m_CaptureZones)
             {
-                var factionsPresent = new HashSet<string>();
+                var playersPerFaction = new Dictionary<string, int>();
 
                 foreach (SteamPlayer steamPlayer in Provider.clients)
                 {
@@ -130,80 +152,113 @@ namespace TerritoryPlugin.Services
                     if ((dx * dx) + (dz * dz) <=
                         zone.Definition.Radius * zone.Definition.Radius)
                     {
-                        factionsPresent.Add(GetFactionId(steamPlayer));
+                        string? factionId = GetFactionId(steamPlayer);
+
+                        if (factionId != null)
+                        {
+                            playersPerFaction.TryGetValue(
+                                factionId,
+                                out int playerCount);
+
+                            playersPerFaction[factionId] = playerCount + 1;
+                        }
                     }
                 }
 
-                UpdateZone(zone, factionsPresent, 0.5f);
+                UpdateZone(zone, playersPerFaction, 0.5f);
             }
         }
 
         private void UpdateZone(
             CaptureZoneRuntime zone,
-            IReadOnlyCollection<string> factionsPresent,
+            IReadOnlyDictionary<string, int> playersPerFaction,
             float elapsedSeconds)
         {
-            if (factionsPresent.Count == 0)
+            if (zone.State == CaptureState.Finished)
             {
-                zone.State = zone.OwnerFactionId == null
-                    ? CaptureState.Neutral
-                    : CaptureState.Controlled;
-
-                zone.CapturingFactionId = null;
-                zone.Progress = 0f;
                 return;
             }
 
-            if (factionsPresent.Count > 1)
+            float remainingSeconds = Math.Max(
+                0f,
+                m_ScoringDurationSeconds - zone.ElapsedSeconds);
+
+            float scoringSeconds = Math.Min(
+                elapsedSeconds,
+                remainingSeconds);
+
+            zone.ElapsedSeconds += scoringSeconds;
+            zone.ScoreTickAccumulator += scoringSeconds;
+
+            int wholeSeconds = (int)zone.ScoreTickAccumulator;
+
+            if (wholeSeconds > 0)
             {
-                if (zone.State != CaptureState.Contested)
+                zone.ScoreTickAccumulator -= wholeSeconds;
+
+                foreach (KeyValuePair<string, int> faction in playersPerFaction)
                 {
-                    m_Logger.LogInformation(
-                        "Capture zone {Zone} is contested by {FactionCount} players.",
-                        zone.Definition.Name,
-                        factionsPresent.Count);
-                }
+                    zone.FactionScores.TryGetValue(
+                        faction.Key,
+                        out int currentScore);
 
-                zone.State = CaptureState.Contested;
-                return; // Freeze progress while contested.
+                    zone.FactionScores[faction.Key] = currentScore +
+                        (faction.Value * wholeSeconds);
+                }
             }
 
-            string faction = factionsPresent.First();
-
-            if (faction == zone.OwnerFactionId)
+            if (zone.ElapsedSeconds >= m_ScoringDurationSeconds)
             {
-                zone.State = CaptureState.Controlled;
-                zone.CapturingFactionId = null;
-                zone.Progress = 0f;
+                FinishZone(zone);
+            }
+        }
+
+        private void FinishZone(CaptureZoneRuntime zone)
+        {
+            string? leadingFaction = null;
+            int leadingScore = 0;
+            bool isTie = false;
+
+            foreach (KeyValuePair<string, int> faction in zone.FactionScores)
+            {
+                if (leadingFaction == null || faction.Value > leadingScore)
+                {
+                    leadingFaction = faction.Key;
+                    leadingScore = faction.Value;
+                    isTie = false;
+                }
+                else if (faction.Value == leadingScore)
+                {
+                    isTie = true;
+                }
+            }
+
+            zone.State = CaptureState.Finished;
+
+            if (leadingFaction == null || isTie)
+            {
+                m_Logger.LogInformation(
+                    "Capture zone {Zone} ended with no winner.",
+                    zone.Definition.Name);
+
                 return;
             }
 
-            if (zone.CapturingFactionId != faction)
-            {
-                zone.CapturingFactionId = faction;
-                zone.Progress = 0f;
+            zone.WinningFactionId = leadingFaction;
 
-                m_Logger.LogInformation(
-                    "{Faction} started capturing {Zone}.",
-                    faction,
-                    zone.Definition.Name);
-            }
+            m_FactionRewards.TryGetValue(
+                leadingFaction,
+                out int currentReward);
 
-            zone.State = CaptureState.Capturing;
-            zone.Progress += elapsedSeconds / 30f; // 30 seconds to capture
+            m_FactionRewards[leadingFaction] = currentReward +
+                zone.Definition.Weight;
 
-            if (zone.Progress >= 1f)
-            {
-                zone.OwnerFactionId = faction;
-                zone.CapturingFactionId = null;
-                zone.Progress = 0f;
-                zone.State = CaptureState.Controlled;
-
-                m_Logger.LogInformation(
-                    "{Faction} captured {Zone}.",
-                    faction,
-                    zone.Definition.Name);
-            }
+            m_Logger.LogInformation(
+                "{Faction} won {Zone} with {Score} player-seconds and earned {Reward} faction points.",
+                leadingFaction,
+                zone.Definition.Name,
+                leadingScore,
+                zone.Definition.Weight);
         }
     }
 }
