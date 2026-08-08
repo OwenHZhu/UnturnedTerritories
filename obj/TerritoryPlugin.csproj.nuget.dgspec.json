@@ -1,0 +1,77 @@
+{
+  "format": 1,
+  "restore": {
+    "G:\\CODING_STUFF\\Unturned\\TerritoryPlugin.csproj": {}
+  },
+  "projects": {
+    "G:\\CODING_STUFF\\Unturned\\TerritoryPlugin.csproj": {
+      "version": "0.1.0",
+      "restore": {
+        "projectUniqueName": "G:\\CODING_STUFF\\Unturned\\TerritoryPlugin.csproj",
+        "projectName": "TerritoryPlugin",
+        "projectPath": "G:\\CODING_STUFF\\Unturned\\TerritoryPlugin.csproj",
+        "packagesPath": "C:\\Users\\1flar\\.nuget\\packages\\",
+        "outputPath": "G:\\CODING_STUFF\\Unturned\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\1flar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "netstandard2.1"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "noWarn": [
+            "NU1701",
+            "NU1702"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "dependencies": {
+            "OpenMod.Core": {
+              "target": "Package",
+              "version": "[3.8.10, )"
+            },
+            "OpenMod.Unturned": {
+              "target": "Package",
+              "version": "[3.8.10, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.401\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}
