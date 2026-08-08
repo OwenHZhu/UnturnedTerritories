@@ -32,13 +32,14 @@ namespace TerritoryPlugin.Commands
             if (Context.Parameters.Length == 0)
             {
                 await player.PrintMessageAsync(
-                    "Usage: /territory claim");
+                    "Usage: /territory claim|info");
 
                 return;
             }
 
             string action = Context.Parameters[0].ToLower();
 
+            //territory claim
             if (action == "claim")
             {
                 Vector3 position =
@@ -80,8 +81,47 @@ namespace TerritoryPlugin.Commands
                 return;
             }
 
+            //territory info
+            if (action == "info")
+            {
+                Vector3 position =
+                    player.Player.Player.transform.position;
+
+                Territory? territory =
+                    m_TerritoryService.GetTerritoryAt(
+                        position.x,
+                        position.z);
+
+                if (territory == null)
+                {
+                    await player.PrintMessageAsync(
+                        "You are not inside a territory.");
+
+                    return;
+                }
+
+                float dx = position.x - territory.X;
+                float dz = position.z - territory.Z;
+
+                float distance = Mathf.Sqrt(dx * dx + dz * dz);
+
+                await player.PrintMessageAsync(
+                    $"Territory: {territory.Name}");
+
+                await player.PrintMessageAsync(
+                    $"Center: {territory.X:F1}, {territory.Y:F1}, {territory.Z:F1}");
+
+                await player.PrintMessageAsync(
+                    $"Radius: {territory.Radius:F0}m");
+                
+                await player.PrintMessageAsync(
+                    $"Distance to center: {distance:F1}m");
+
+                return;
+            }
+
             await player.PrintMessageAsync(
-                "Unknown subcommand. Use /territory claim");
+                "Unknown subcommand. Use /territory claim|info");
         }
     }
 }

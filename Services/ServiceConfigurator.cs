@@ -10,6 +10,7 @@ namespace TerritoryPlugin.Services
             IServiceCollection serviceCollection)
         {
             serviceCollection.AddSingleton<TerritoryService>();
+            serviceCollection.AddSingleton<CaptureZoneService>();
         }
     }
 }
