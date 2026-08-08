@@ -5,16 +5,24 @@ using OpenMod.Core.Commands;
 using OpenMod.Unturned.Commands;
 using OpenMod.Unturned.Users;
 using TerritoryPlugin.Models;
+using TerritoryPlugin.Services;
 using UnityEngine;
 
 namespace TerritoryPlugin.Commands
 {
     [Command("territory")]
+    [CommandAlias("t")]
+    [CommandDescription("Manage territories.")]
     public class TerritoryCommand : UnturnedCommand
     {
-        public TerritoryCommand(IServiceProvider serviceProvider)
+        private readonly TerritoryService m_TerritoryService;
+
+        public TerritoryCommand(
+            IServiceProvider serviceProvider,
+            TerritoryService territoryService)
             : base(serviceProvider)
         {
+            m_TerritoryService = territoryService;
         }
 
         protected override async UniTask OnExecuteAsync()
@@ -36,17 +44,32 @@ namespace TerritoryPlugin.Commands
                 Vector3 position =
                     player.Player.Player.transform.position;
 
+                Territory? existingTerritory =
+                    m_TerritoryService.GetTerritoryAt(
+                        position.x,
+                        position.z);
+
+                if (existingTerritory != null)
+                {
+                    await player.PrintMessageAsync(
+                        "This location is already inside a territory.");
+
+                    return;
+                }
+
                 var territory = new Territory
                 {
-                    Name = $"Territory at {position.x:F0}, {position.z:F0}",
+                    Name = $"Territory {m_TerritoryService.Territories.Count + 1}",
                     X = position.x,
                     Y = position.y,
                     Z = position.z,
                     Radius = 100f
                 };
 
+                m_TerritoryService.AddTerritory(territory);
+
                 await player.PrintMessageAsync(
-                    $"You claimed {territory.Name}!");
+                    $"Territory claimed!");
 
                 await player.PrintMessageAsync(
                     $"Center: {territory.X:F1}, {territory.Y:F1}, {territory.Z:F1}");
@@ -58,7 +81,7 @@ namespace TerritoryPlugin.Commands
             }
 
             await player.PrintMessageAsync(
-                $"Unknown territory command: {action}");
+                "Unknown subcommand. Use /territory claim");
         }
     }
 }

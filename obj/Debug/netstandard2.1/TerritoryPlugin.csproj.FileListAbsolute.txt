@@ -8,3 +8,4 @@ G:\CODING_STUFF\Unturned\bin\Debug\netstandard2.1\TerritoryPlugin.dll
 G:\CODING_STUFF\Unturned\bin\Debug\netstandard2.1\TerritoryPlugin.pdb
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.dll
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.pdb
+G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.sourcelink.json
