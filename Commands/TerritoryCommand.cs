@@ -16,13 +16,16 @@ namespace TerritoryPlugin.Commands
     public class TerritoryCommand : UnturnedCommand
     {
         private readonly TerritoryService m_TerritoryService;
+        private readonly CaptureZoneService m_CaptureZoneService;
 
         public TerritoryCommand(
             IServiceProvider serviceProvider,
-            TerritoryService territoryService)
+            TerritoryService territoryService,
+            CaptureZoneService captureZoneService)
             : base(serviceProvider)
         {
             m_TerritoryService = territoryService;
+            m_CaptureZoneService = captureZoneService;
         }
 
         protected override async UniTask OnExecuteAsync()
@@ -69,8 +72,17 @@ namespace TerritoryPlugin.Commands
 
                 m_TerritoryService.AddTerritory(territory);
 
+                m_CaptureZoneService.AddCaptureZone(new CaptureZone
+                {
+                    Name = territory.Name,
+                    X = territory.X,
+                    Y = territory.Y,
+                    Z = territory.Z,
+                    Radius = territory.Radius
+                });
+
                 await player.PrintMessageAsync(
-                    $"Territory claimed!");
+                    "Territory and test capture zone created!");
 
                 await player.PrintMessageAsync(
                     $"Center: {territory.X:F1}, {territory.Y:F1}, {territory.Z:F1}");

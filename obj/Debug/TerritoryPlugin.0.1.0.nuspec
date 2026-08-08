@@ -8,7 +8,7 @@
     <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
     <description>Package Description</description>
     <tags>openmod openmod-plugin universal</tags>
-    <repository type="git" commit="eeed27439eb908c23e86b9ca6cbd94f7449d4ee9" />
+    <repository type="git" commit="6e482410acccc6e8f10410e49b8e0c98d0c51415" />
     <dependencies>
       <group targetFramework=".NETStandard2.1">
         <dependency id="OpenMod.Core" version="3.8.10" exclude="Build,Analyzers" />
