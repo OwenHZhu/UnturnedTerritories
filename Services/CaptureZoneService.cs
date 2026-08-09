@@ -18,8 +18,10 @@ namespace TerritoryPlugin.Services
 
         private readonly TerritoryService m_TerritoryService;
         private readonly ILogger<CaptureZoneService> m_Logger;
-        private readonly float m_ScoringDurationSeconds;
         private readonly Lazy<IPluginAccessor<TerritoryPlugin>> m_PluginAccessor;
+        private readonly TimeZoneInfo m_ScheduleTimeZone;
+        private readonly TimeSpan m_ScoringStart;
+        private readonly TimeSpan m_ScoringEnd;
 
         private readonly Dictionary<ulong, Territory?> m_PlayerTerritories =
             new Dictionary<ulong, Territory?>();
@@ -36,8 +38,8 @@ namespace TerritoryPlugin.Services
         public IReadOnlyDictionary<string, int> FactionRewards =>
             m_FactionRewards;
 
-        public float ScoringDurationSeconds =>
-            m_ScoringDurationSeconds;
+        public CaptureState CurrentScheduleState =>
+            GetCurrentScheduleState();
 
         public CaptureZoneService(
             TerritoryService territoryService,
@@ -48,14 +50,9 @@ namespace TerritoryPlugin.Services
             m_TerritoryService = territoryService;
             m_Logger = logger;
             m_PluginAccessor = pluginAccessor;
-            m_ScoringDurationSeconds = configuration.GetValue(
-                "capture_zones:scoring_duration_seconds",
-                60f);
-
-            if (m_ScoringDurationSeconds <= 0f)
-            {
-                m_ScoringDurationSeconds = 60f;
-            }
+            m_ScheduleTimeZone = GetScheduleTimeZone(configuration);
+            m_ScoringStart = GetScheduledTime(configuration, "capture_zones:scoring_start", "19:30");
+            m_ScoringEnd = GetScheduledTime(configuration, "capture_zones:scoring_end", "20:00");
         }
 
         public async UniTask StartAsync(
@@ -83,12 +80,13 @@ namespace TerritoryPlugin.Services
 
             m_Logger.LogInformation(
                 "Capture zone {Zone} created at {X:F1}, {Z:F1} with a {Radius:F0}m radius. " +
-                "Scoring ends in {Duration:F0} seconds.",
+                "Daily scoring runs from {Start} to {End}.",
                 captureZone.Name,
                 captureZone.X,
                 captureZone.Z,
                 captureZone.Radius,
-                m_ScoringDurationSeconds);
+                m_ScoringStart,
+                m_ScoringEnd);
 
             return runtime;
         }
@@ -149,6 +147,8 @@ namespace TerritoryPlugin.Services
 
         private void UpdateCaptureZones()
         {
+            CaptureState scheduleState = GetCurrentScheduleState();
+
             foreach (CaptureZoneRuntime zone in m_CaptureZones)
             {
                 var playersPerFaction = new Dictionary<string, int>();
@@ -177,7 +177,11 @@ namespace TerritoryPlugin.Services
                     }
                 }
 
-                UpdateZone(zone, playersPerFaction, 0.5f);
+                UpdateZone(
+                    zone,
+                    playersPerFaction,
+                    scheduleState,
+                    0.5f);
             }
         }
 
@@ -221,31 +225,43 @@ namespace TerritoryPlugin.Services
 
         public float GetRemainingSeconds(CaptureZoneRuntime zone)
         {
-            return Math.Max(
-                0f,
-                m_ScoringDurationSeconds - zone.ElapsedSeconds);
+            if (GetCurrentScheduleState() != CaptureState.Scoring)
+            {
+                return 0f;
+            }
+
+            return (float)GetSecondsUntil(
+                GetScheduleLocalTime(),
+                m_ScoringEnd);
         }
 
         private void UpdateZone(
             CaptureZoneRuntime zone,
             IReadOnlyDictionary<string, int> playersPerFaction,
+            CaptureState scheduleState,
             float elapsedSeconds)
         {
-            if (zone.State == CaptureState.Finished)
+            if (scheduleState != CaptureState.Scoring)
             {
+                if (zone.State == CaptureState.Scoring)
+                {
+                    FinishZone(zone);
+                }
+
+                if (zone.State != CaptureState.Finished)
+                {
+                    zone.State = scheduleState;
+                }
+
                 return;
             }
 
-            float remainingSeconds = Math.Max(
-                0f,
-                m_ScoringDurationSeconds - zone.ElapsedSeconds);
+            if (zone.State != CaptureState.Scoring)
+            {
+                StartScoringRound(zone);
+            }
 
-            float scoringSeconds = Math.Min(
-                elapsedSeconds,
-                remainingSeconds);
-
-            zone.ElapsedSeconds += scoringSeconds;
-            zone.ScoreTickAccumulator += scoringSeconds;
+            zone.ScoreTickAccumulator += elapsedSeconds;
 
             int wholeSeconds = (int)zone.ScoreTickAccumulator;
 
@@ -264,10 +280,18 @@ namespace TerritoryPlugin.Services
                 }
             }
 
-            if (zone.ElapsedSeconds >= m_ScoringDurationSeconds)
-            {
-                FinishZone(zone);
-            }
+        }
+
+        private void StartScoringRound(CaptureZoneRuntime zone)
+        {
+            zone.FactionScores.Clear();
+            zone.WinningFactionId = null;
+            zone.ScoreTickAccumulator = 0f;
+            zone.State = CaptureState.Scoring;
+
+            m_Logger.LogInformation(
+                "Scoring started for capture zone {Zone}.",
+                zone.Definition.Name);
         }
 
         private void FinishZone(CaptureZoneRuntime zone)
@@ -318,6 +342,107 @@ namespace TerritoryPlugin.Services
                 zone.Definition.Name,
                 leadingScore,
                 zone.Definition.Weight);
+        }
+
+        private TimeZoneInfo GetScheduleTimeZone(
+            IConfiguration configuration)
+        {
+            string? timeZoneId = configuration[
+                "capture_zones:time_zone_id"];
+
+            if (string.IsNullOrWhiteSpace(timeZoneId))
+            {
+                return TimeZoneInfo.Local;
+            }
+
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                m_Logger.LogWarning(
+                    "Timezone {Timezone} was not found. Using server local time.",
+                    timeZoneId);
+                return TimeZoneInfo.Local;
+            }
+            catch (InvalidTimeZoneException)
+            {
+                m_Logger.LogWarning(
+                    "Timezone {Timezone} is invalid. Using server local time.",
+                    timeZoneId);
+                return TimeZoneInfo.Local;
+            }
+        }
+
+        private TimeSpan GetScheduledTime(
+            IConfiguration configuration,
+            string configurationKey,
+            string fallback)
+        {
+            string value = configuration[configurationKey] ?? fallback;
+
+            if (TimeSpan.TryParse(value, out TimeSpan scheduledTime))
+            {
+                return scheduledTime;
+            }
+
+            m_Logger.LogWarning(
+                "Invalid scheduled time {Value} for {Key}. Using {Fallback}.",
+                value,
+                configurationKey,
+                fallback);
+
+            return TimeSpan.Parse(fallback);
+        }
+
+        private CaptureState GetCurrentScheduleState()
+        {
+            TimeSpan currentTime = GetScheduleLocalTime();
+
+            if (IsWithinWindow(
+                currentTime,
+                m_ScoringStart,
+                m_ScoringEnd))
+            {
+                return CaptureState.Scoring;
+            }
+
+            return CaptureState.Inactive;
+        }
+
+        private TimeSpan GetScheduleLocalTime()
+        {
+            return TimeZoneInfo.ConvertTime(
+                DateTimeOffset.UtcNow,
+                m_ScheduleTimeZone).TimeOfDay;
+        }
+
+        private static bool IsWithinWindow(
+            TimeSpan currentTime,
+            TimeSpan startTime,
+            TimeSpan endTime)
+        {
+            if (startTime < endTime)
+            {
+                return currentTime >= startTime && currentTime < endTime;
+            }
+
+            return currentTime >= startTime || currentTime < endTime;
+        }
+
+        private static double GetSecondsUntil(
+            TimeSpan currentTime,
+            TimeSpan endTime)
+        {
+            TimeSpan remaining = endTime - currentTime;
+
+            if (remaining <= TimeSpan.Zero)
+            {
+                remaining += TimeSpan.FromDays(1);
+            }
+
+            return remaining.TotalSeconds;
         }
 
         private async UniTask LoadFactionRewardsAsync()

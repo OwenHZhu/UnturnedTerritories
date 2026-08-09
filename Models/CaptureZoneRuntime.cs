@@ -4,6 +4,7 @@ namespace TerritoryPlugin.Models
 {
     public enum CaptureState
     {
+        Inactive,
         Scoring,
         Finished
     }
@@ -17,9 +18,7 @@ namespace TerritoryPlugin.Models
 
         public CaptureZone Definition { get; }
 
-        public CaptureState State { get; set; } = CaptureState.Scoring;
-
-        public float ElapsedSeconds { get; set; }
+        public CaptureState State { get; set; } = CaptureState.Inactive;
 
         public float ScoreTickAccumulator { get; set; }
 

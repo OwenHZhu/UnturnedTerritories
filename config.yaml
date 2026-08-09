@@ -1,3 +1,5 @@
-# Length of each capture-zone scoring round.
+# All schedule times repeat daily in this timezone.
 capture_zones:
-  scoring_duration_seconds: 60
+  time_zone_id: "America/Toronto"
+  scoring_start: "19:30"
+  scoring_end: "20:00"
