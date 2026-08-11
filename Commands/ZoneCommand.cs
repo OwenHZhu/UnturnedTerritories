@@ -81,9 +81,13 @@ namespace TerritoryPlugin.Commands
                     return;
                 }
 
-
-
-                
+                await player.PrintMessageAsync(
+                    $"You are inside capture zone '{zoneRuntime.Definition.Name}'.");
+                await player.PrintMessageAsync(
+                    $"Radius: {zoneRuntime.Definition.Radius:F0}m");
+                await player.PrintMessageAsync(
+                    $"State: {zoneRuntime.State}");
+                return;
             }
 
 
