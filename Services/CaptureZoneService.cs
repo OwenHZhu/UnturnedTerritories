@@ -117,21 +117,18 @@ namespace TerritoryPlugin.Services
             return null;
         }
 
-        public TimeSpan GetCaptureWindow()
+        public string GetCaptureWindow()
         {
-            Console.WriteLine($"[TerritoryPlugin DEBUG] scoring_start='{m_Configuration.ScoringStart}' scoring_end='{m_Configuration.ScoringEnd}'");
-
-            TimeSpan startTime = TimeSpan.Parse(m_Configuration.ScoringStart);
-            TimeSpan endTime = TimeSpan.Parse(m_Configuration.ScoringEnd);
-            return endTime - startTime;
+            var startTime = TimeSpan.Parse(m_Configuration.ScoringStart);
+            var endTime = TimeSpan.Parse(m_Configuration.ScoringEnd);
+            return $"Starttime: {startTime} EndTime: {endTime}";
         }
 
         private bool IsCaptureWindowOpen()
         {
             var currentTime = DateTime.Now.TimeOfDay;
-            var scoringWindow = GetCaptureWindow();
-            var startTime = TimeSpan.Zero;
-            var endTime = scoringWindow;
+            var startTime = TimeSpan.Parse(m_Configuration.ScoringStart);
+            var endTime = TimeSpan.Parse(m_Configuration.ScoringEnd);
 
             return currentTime >= startTime && currentTime <= endTime;
         }
