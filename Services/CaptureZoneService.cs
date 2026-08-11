@@ -38,6 +38,8 @@ namespace TerritoryPlugin.Services
         public IReadOnlyDictionary<string, int> FactionRewards =>
             m_FactionRewards;
 
+        public readonly IFactionService m_FactionService;
+
         public CaptureState CurrentScheduleState =>
             GetCurrentScheduleState();
 
@@ -45,9 +47,10 @@ namespace TerritoryPlugin.Services
             TerritoryService territoryService,
             IConfiguration configuration,
             Lazy<IPluginAccessor<TerritoryPlugin>> pluginAccessor,
-            ILogger<CaptureZoneService> logger)
+            ILogger<CaptureZoneService> logger, IFactionService factionService)
         {
             m_TerritoryService = territoryService;
+            m_FactionService = factionService;
             m_Logger = logger;
             m_PluginAccessor = pluginAccessor;
             m_ScheduleTimeZone = GetScheduleTimeZone(configuration);
@@ -91,13 +94,10 @@ namespace TerritoryPlugin.Services
             return runtime;
         }
 
-        private static string? GetFactionId(SteamPlayer player)
+        private string? GetFactionId(SteamPlayer player)
         {
-            ulong groupId = player.playerID.group.m_SteamID;
-
-            return groupId == 0
-                ? null
-                : groupId.ToString();
+            ulong steamId = player.playerID.steamID.m_SteamID;
+            return m_FactionService.GetFactionId(steamId);
         }
 
         private void CheckPlayers()
@@ -410,6 +410,7 @@ namespace TerritoryPlugin.Services
 
             return CaptureState.Inactive;
         }
+
 
         private TimeSpan GetScheduleLocalTime()
         {

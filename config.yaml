@@ -1,5 +1,6 @@
 # All schedule times repeat daily in this timezone.
 capture_zones:
-  time_zone_id: "America/Toronto"
-  scoring_start: "19:30"
-  scoring_end: "20:00"
+  time_zone_id: "america/santiago"
+  scoring_start: "00:00"
+  scoring_end: "23:59"
+

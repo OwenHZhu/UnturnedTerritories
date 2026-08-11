@@ -11,6 +11,7 @@ namespace TerritoryPlugin.Services
         {
             serviceCollection.AddSingleton<TerritoryService>();
             serviceCollection.AddSingleton<CaptureZoneService>();
+            serviceCollection.AddSingleton<IFactionService, FactionService>();
         }
     }
 }
