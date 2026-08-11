@@ -34,12 +34,6 @@ namespace TerritoryPlugin
             m_CaptureZoneService = captureZoneService;
         }
 
-        protected override Task OnLoadAsync()
-        {
-            m_Logger.LogInformation(m_StringLocalizer["plugin_events:plugin_start"]);
-            m_CaptureZoneService.StartAsync(CancellationToken.None).Forget();
-            return Task.CompletedTask;
-        }
 
         protected override Task OnUnloadAsync()
         {

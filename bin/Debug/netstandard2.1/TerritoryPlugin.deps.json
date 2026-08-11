@@ -7,7 +7,7 @@
   "targets": {
     ".NETStandard,Version=v2.1": {},
     ".NETStandard,Version=v2.1/": {
-      "TerritoryPlugin/0.1.0": {
+      "TerritoryPlugin/0.1.1": {
         "dependencies": {
           "OpenMod.Core": "3.8.10",
           "OpenMod.Unturned": "3.8.10"
@@ -1217,7 +1217,7 @@
     }
   },
   "libraries": {
-    "TerritoryPlugin/0.1.0": {
+    "TerritoryPlugin/0.1.1": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

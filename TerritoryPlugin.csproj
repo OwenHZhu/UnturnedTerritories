@@ -8,12 +8,13 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <GenerateNugetPackage>true</GenerateNugetPackage>
     <Product>Territory Plugin</Product>
+     <AssemblyName>TerritoryPlugin</AssemblyName>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
     <NoWarn>$(NoWarn);NU1701;NU1702;CS0436</NoWarn>
-    <Version>0.1.0</Version>
-    <InformationalVersion>0.1.0</InformationalVersion>
-    <PackageVersion>0.1.0</PackageVersion>
+    <Version>0.1.1</Version>
+    <InformationalVersion>0.1.1</InformationalVersion>
+    <PackageVersion>0.1.1</PackageVersion>
   </PropertyGroup>
 
   <ItemGroup>

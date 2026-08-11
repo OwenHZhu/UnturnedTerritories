@@ -41,7 +41,7 @@ namespace TerritoryPlugin.Commands
                     player.Player.Player.transform.position;
                 var zone = new CaptureZone
                 {
-                    Name = $"Zone {m_CaptureZoneService.CaptureZones.Count + 1}",
+                    Name = $"Zone {m_CaptureZoneService.CaptureZonesList.Count + 1}",
                     X = position.x,
                     Y = position.y,
                     Z = position.z,
@@ -56,29 +56,13 @@ namespace TerritoryPlugin.Commands
 
                 await player.PrintMessageAsync(
                     $"Radius: {zone.Radius:F0}m");
-            }
 
-            if (action == "leaderboard")
-            {
-                var leaderboard = m_CaptureZoneService.GetFactionLeaderboard();
-                if (leaderboard.Count == 0)
-                {
-                    await player.PrintMessageAsync(
-                        "No faction points have been awarded yet.");
-                    return;
-                }
-                await player.PrintMessageAsync("Faction leaderboard:");
-                int rank = 1;
-
-                foreach (var faction in leaderboard)
-                {
-                    await player.PrintMessageAsync(
-                        $"{rank}. Group {faction.Key}: {faction.Value} points");
-
-                    rank++;
-                }
-
-                return;
+                await player.PrintMessageAsync(
+                    ///
+                    /// this is a TimeSpan not sure if it needs to be a string
+                    /// 
+                    /// 
+                    $"Scoring window: {m_CaptureZoneService.GetCaptureWindow()}");
             }
 
             if (action == "status")
@@ -86,51 +70,20 @@ namespace TerritoryPlugin.Commands
                 Vector3 position =
                     player.Player.Player.transform.position;
 
-                CaptureZoneRuntime? zone =
+                CaptureZoneRuntime? zoneRuntime =
                     m_CaptureZoneService.GetCaptureZoneAt(
                         position.x,
                         position.z);
-
-                if (zone == null)
+                if (zoneRuntime == null)
                 {
                     await player.PrintMessageAsync(
                         "You are not inside a capture zone.");
-
                     return;
                 }
 
-                await player.PrintMessageAsync(
-                    m_CaptureZoneService.CurrentScheduleState ==
-                    CaptureState.Scoring
-                        ? $"{zone.Definition.Name}: " +
-                          $"{m_CaptureZoneService.GetRemainingSeconds(zone):F0}s remaining"
-                        : $"{zone.Definition.Name} is not currently scoring " +
-                          $"({m_CaptureZoneService.CurrentScheduleState}).");
 
-                var leaderboard =
-                    m_CaptureZoneService.GetZoneLeaderboard(zone, 3);
 
-                if (leaderboard.Count == 0)
-                {
-                    await player.PrintMessageAsync(
-                        "No group has scored in this zone yet.");
-
-                    return;
-                }
-
-                await player.PrintMessageAsync("Zone leaderboard:");
-
-                int rank = 1;
-
-                foreach (var faction in leaderboard)
-                {
-                    await player.PrintMessageAsync(
-                        $"{rank}. Group {faction.Key}: {faction.Value} score");
-
-                    rank++;
-                }
-
-                return;
+                
             }
 
 

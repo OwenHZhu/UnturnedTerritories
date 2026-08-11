@@ -1,11 +1,11 @@
+G:\CODING_STUFF\Unturned\bin\Debug\netstandard2.1\TerritoryPlugin.deps.json
+G:\CODING_STUFF\Unturned\bin\Debug\netstandard2.1\TerritoryPlugin.dll
+G:\CODING_STUFF\Unturned\bin\Debug\netstandard2.1\TerritoryPlugin.pdb
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.csproj.AssemblyReference.cache
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.GeneratedMSBuildEditorConfig.editorconfig
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.AssemblyInfoInputs.cache
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.AssemblyInfo.cs
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.csproj.CoreCompileInputs.cache
-G:\CODING_STUFF\Unturned\bin\Debug\netstandard2.1\TerritoryPlugin.deps.json
-G:\CODING_STUFF\Unturned\bin\Debug\netstandard2.1\TerritoryPlugin.dll
-G:\CODING_STUFF\Unturned\bin\Debug\netstandard2.1\TerritoryPlugin.pdb
+G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.sourcelink.json
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.dll
 G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.pdb
-G:\CODING_STUFF\Unturned\obj\Debug\netstandard2.1\TerritoryPlugin.sourcelink.json
