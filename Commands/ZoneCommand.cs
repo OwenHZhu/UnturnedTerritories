@@ -27,29 +27,36 @@ namespace TerritoryPlugin.Commands
         protected override async UniTask OnExecuteAsync()
         {
             var player = (UnturnedUser)Context.Actor;
-            
+
             if (Context.Parameters.Length == 0)
             {
-                throw new CommandWrongUsageException("Usage: /zone add|remove|info");
+                throw new CommandWrongUsageException("Usage: /zone set|status|info");
             }
 
             string action = Context.Parameters[0].ToLower();
 
             if (action == "set")
             {
-                Vector3 position =
-                    player.Player.Player.transform.position;
+                if (Context.Parameters.Length < 2)
+                {
+                    throw new CommandWrongUsageException("Usage: /zone set <name>");
+                }
+
+                string zoneName = Context.Parameters[1];
+                Vector3 position = player.Player.Player.transform.position;
+
                 var zone = new CaptureZone
                 {
-                    Name = $"Zone {m_CaptureZoneService.CaptureZonesList.Count + 1}",
+                    Name = zoneName,
                     X = position.x,
                     Y = position.y,
                     Z = position.z,
                     Radius = 50f
                 };
+
                 m_CaptureZoneService.AddCaptureZone(zone);
                 await player.PrintMessageAsync(
-                    "Capture zone created!");
+                    $"Capture zone '{zone.Name}' created!");
 
                 await player.PrintMessageAsync(
                     $"Center: {zone.X:F1}, {zone.Y:F1}, {zone.Z:F1}");
@@ -58,11 +65,8 @@ namespace TerritoryPlugin.Commands
                     $"Radius: {zone.Radius:F0}m");
 
                 await player.PrintMessageAsync(
-                    ///
-                    /// this is a TimeSpan not sure if it needs to be a string
-                    /// 
-                    /// 
                     $"Scoring window: {m_CaptureZoneService.GetCaptureWindow()}");
+                return;
             }
 
             if (action == "status")
@@ -87,11 +91,10 @@ namespace TerritoryPlugin.Commands
                     $"Radius: {zoneRuntime.Definition.Radius:F0}m");
                 await player.PrintMessageAsync(
                     $"State: {zoneRuntime.State}");
+                await player.PrintMessageAsync(
+                    m_CaptureZoneService.GetCurrentZoneScores(zoneRuntime));
                 return;
             }
-
-
-
         }
         
     }

@@ -11,5 +11,6 @@ namespace TerritoryPlugin.Services
         IReadOnlyList<ulong> GetFactionMembers(string factionId);
         Faction? GetFactionByName(string factionName);
         Faction CreateFaction(string factionName);
+        bool DeleteFaction(string factionName);
     }
 }

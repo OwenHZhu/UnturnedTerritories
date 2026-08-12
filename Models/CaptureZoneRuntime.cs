@@ -16,7 +16,7 @@ namespace TerritoryPlugin.Models
             Definition = definition;
         }
 
-        public CaptureZone Definition { get; }
+        public CaptureZone Definition { get; set; }
 
         public CaptureState State { get; set; } = CaptureState.Inactive;
 

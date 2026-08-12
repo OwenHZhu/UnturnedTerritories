@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
@@ -16,15 +17,33 @@ namespace TerritoryPlugin.Services
         private readonly CaptureZoneConfiguration m_Configuration;
         private readonly IFactionService m_FactionService;
         private readonly List<CaptureZoneRuntime> m_CaptureZones = new List<CaptureZoneRuntime>();
+        private readonly object m_stateLock = new object();
         private readonly ILogger<CaptureZoneService> m_Logger;
-        public IReadOnlyList<CaptureZoneRuntime> CaptureZonesList => m_CaptureZones;
+        private readonly Dictionary<ulong, CaptureZoneRuntime?> m_PlayerZones = new Dictionary<ulong, CaptureZoneRuntime?>();
+        public IReadOnlyList<CaptureZoneRuntime> CaptureZonesList
+        {
+            get
+            {
+                lock (m_stateLock)
+                {
+                    return m_CaptureZones.ToArray();
+                }
+            }
+        }
         private readonly Lazy<IPluginAccessor<TerritoryPlugin>> m_PluginAccessor;
 
         private const string FactionScoresDataKey = "FactionScores";
         private readonly Dictionary<string, int> m_FactionRewards =
-            new Dictionary<string, int>();
-        public IReadOnlyDictionary<string, int> FactionRewards =>
-            m_FactionRewards;
+            new Dictionary<string, int>();        public IReadOnlyDictionary<string, int> FactionRewards
+        {
+            get
+            {
+                lock (m_stateLock)
+                {
+                    return new Dictionary<string, int>(m_FactionRewards);
+                }
+            }
+        }
 
 
         public CaptureZoneService(IConfiguration configuration, 
@@ -83,10 +102,16 @@ namespace TerritoryPlugin.Services
                 return;
             }
 
+            Dictionary<string, int> scores;
+            lock (m_stateLock)
+            {
+                scores = new Dictionary<string, int>(m_FactionRewards);
+            }
+
             await plugin.DataStore.SaveAsync(
                 FactionScoresDataKey, new FactionScoreData
                 {
-                    Scores = new Dictionary<string, int>(m_FactionRewards)
+                    Scores = scores
                 }
             );
         }
@@ -94,7 +119,10 @@ namespace TerritoryPlugin.Services
         public void AddCaptureZone(CaptureZone zone)
         {
             var runtime = new CaptureZoneRuntime(zone);
-            m_CaptureZones.Add(runtime);
+            lock (m_stateLock)
+            {
+                m_CaptureZones.Add(runtime);
+            }
         }
 
         public CaptureZoneRuntime? GetCaptureZoneAt(float x, float z)
@@ -122,6 +150,21 @@ namespace TerritoryPlugin.Services
             var startTime = TimeSpan.Parse(m_Configuration.ScoringStart);
             var endTime = TimeSpan.Parse(m_Configuration.ScoringEnd);
             return $"Starttime: {startTime} EndTime: {endTime}";
+        }
+
+        public string GetCurrentZoneScores(CaptureZoneRuntime zone)
+        {
+            if (zone == null) throw new ArgumentNullException(nameof(zone));
+
+            if (zone.FactionScores.Count == 0)
+            {
+                return "No faction scores have been recorded for this zone yet.";
+            }
+
+            return string.Join(Environment.NewLine,
+                zone.FactionScores
+                    .OrderByDescending(kvp => kvp.Value)
+                    .Select(kvp => $"{kvp.Key}: {kvp.Value}"));
         }
 
         private bool IsCaptureWindowOpen()
@@ -153,8 +196,14 @@ namespace TerritoryPlugin.Services
         private void UpdateCaptureZones()
         {
             CaptureState scheduleState = GetCurrentZoneState();
+            CaptureZoneRuntime[] zones;
 
-            foreach (CaptureZoneRuntime zone in m_CaptureZones)
+            lock (m_stateLock)
+            {
+                zones = m_CaptureZones.ToArray();
+            }
+
+            foreach (CaptureZoneRuntime zone in zones)
             {
                 var playersPerFaction = new Dictionary<string, int>();
 
@@ -175,6 +224,8 @@ namespace TerritoryPlugin.Services
                 }
 
                 UpdateZone(zone, playersPerFaction, scheduleState, 1f);
+                CheckPlayers();
+                m_Logger.LogInformation(GetCurrentZoneScores(zone)); //this line constantly outputs score of zone
             }
         }
 
@@ -250,8 +301,12 @@ namespace TerritoryPlugin.Services
 
             zone.WinningFactionId = leadingFaction;
 
-            m_FactionRewards.TryGetValue(leadingFaction, out int currentReward);
-            m_FactionRewards[leadingFaction] = currentReward + zone.Definition.Weight;
+            lock (m_stateLock)
+            {
+                m_FactionRewards.TryGetValue(leadingFaction, out int currentReward);
+                m_FactionRewards[leadingFaction] = currentReward + zone.Definition.Weight;
+            }
+
             SaveFactionScoresAsync().Forget();
 
             m_Logger.LogInformation(
@@ -272,6 +327,31 @@ namespace TerritoryPlugin.Services
             }
             ulong steamId = steamPlayer.playerID.steamID.m_SteamID;
             return m_FactionService.GetFactionId(steamId);
+        }
+
+        private void CheckPlayers()
+        {
+            foreach (SteamPlayer steamPlayer in Provider.clients)
+            {
+                Vector3 position = steamPlayer.player.transform.position;
+                CaptureZoneRuntime? currentZone = GetCaptureZoneAt(position.x, position.z);
+                ulong steamId = steamPlayer.playerID.steamID.m_SteamID;
+
+                m_PlayerZones.TryGetValue(steamId, out CaptureZoneRuntime? previousZone); 
+
+                if (currentZone != previousZone)
+                {
+                    if (previousZone != null)
+                    {
+                        m_Logger.LogInformation("{Player} left {Territory}", steamPlayer.playerID.characterName, previousZone.Definition);
+                    }
+                    if (currentZone != null)
+                    {
+                        m_Logger.LogInformation("{Player} entered {Territory}", steamPlayer.playerID.characterName, currentZone.Definition);
+                    }
+                    m_PlayerZones[steamId] = currentZone;
+                }
+            }
         }
         
         

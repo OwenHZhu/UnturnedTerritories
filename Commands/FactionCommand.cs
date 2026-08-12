@@ -8,6 +8,7 @@ using TerritoryPlugin.Services;
 using System;
 using OpenMod.Core.Console;
 using SDG.Unturned;
+using System.Collections.Generic;
 
 namespace TerritoryPlugin.Commands
 {
@@ -35,10 +36,8 @@ namespace TerritoryPlugin.Commands
 
             if (Context.Parameters.Length == 0)
             {
-                await player.PrintMessageAsync(
-                    "Usage: /faction create|info|leaderboard");
-
-                return;
+                throw new UserFriendlyException(
+                    "Usage: /faction create|remove|delete|list");
             }
 
             string action = Context.Parameters[0].ToLower();
@@ -69,6 +68,26 @@ namespace TerritoryPlugin.Commands
 
                 await player.PrintMessageAsync(
                     $"Faction '{newFaction.Name}' created successfully.");
+            }
+
+            if (action == "delete")
+            {
+                if (Context.Parameters.Length < 2)
+                {
+                    await player.PrintMessageAsync(
+                        "Usage: /faction remove <faction>");
+
+                    return;
+                }
+
+                string factionName = Context.Parameters[1];
+                bool deleted = m_FactionService.DeleteFaction(factionName);
+
+                if (deleted)
+                {
+                    await player.PrintMessageAsync($"Faction '{factionName}' has been deleted");
+                }
+                return;
             }
 
             if (action == "add")
@@ -113,10 +132,9 @@ namespace TerritoryPlugin.Commands
             {
                 if (Context.Parameters.Length < 3)
                 {
-                    await player.PrintMessageAsync(
+                    throw new UserFriendlyException(
                         "Usage: /faction remove <steamId|playerName> <factionName>"
                     );
-                    return;
                 }
 
                 string target = Context.Parameters[1];
@@ -133,9 +151,8 @@ namespace TerritoryPlugin.Commands
 
                     if (steamPlayer == null)
                     {
-                        await player.PrintMessageAsync(
+                        throw new UserFriendlyException(
                             $"Player '{target}' is not connected or could not be found.");
-                        return;
                     }
 
                     steamId = steamPlayer.playerID.steamID.m_SteamID;
@@ -145,7 +162,7 @@ namespace TerritoryPlugin.Commands
 
                 if (removed)
                 {
-                    await player.PrintMessageAsync(
+                    throw new UserFriendlyException(
                         $"Removed {target} from faction '{factionName}' as SteamID {steamId}."
                     );
                 }
@@ -155,6 +172,32 @@ namespace TerritoryPlugin.Commands
                         $"No faction membership found for SteamID {steamId}."
                     );
                 }
+            }
+
+            if (action == "list")
+            {
+                if (Context.Parameters.Length < 2)
+                {
+                    throw new UserFriendlyException("Usage: faction list <faction>");
+                }
+
+                string factionName = Context.Parameters[1];
+                var members = m_FactionService.GetFactionMembers(factionName);
+
+                var existingFaction = m_FactionService.GetFactionByName(factionName) 
+                ?? throw new UserFriendlyException("No faction by that name");
+
+                if (members.Count == 0)
+                {
+                    await player.PrintMessageAsync("No members found in that faction");
+                    return;
+                }
+
+                var names = members.Select(steamId => Provider.clients.FirstOrDefault(p => p.playerID.steamID.m_SteamID == steamId)?
+                .playerID.characterName ?? steamId.ToString()).ToList();
+
+                await player.PrintMessageAsync($"Members of '{factionName}': {string.Join(", ", names)}");
+
             }
         }
     }

@@ -101,5 +101,27 @@ namespace TerritoryPlugin.Services
 
             return faction;
         }
+
+        public bool DeleteFaction(string factionName)
+        {
+            if (string.IsNullOrWhiteSpace(factionName))
+            {
+                return false;
+            }
+
+            factionName = factionName.Trim();
+
+            if(!m_factions.TryGetValue(factionName, out var faction))
+            {
+                return false;
+            }
+
+            foreach (var memberSteamId in GetFactionMembers(faction.Id).ToList())
+            {
+                m_playerFactions.Remove(memberSteamId);
+            }
+            m_factions.Remove(factionName);
+            return true;
+        }
     }
 }
