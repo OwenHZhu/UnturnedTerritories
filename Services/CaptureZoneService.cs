@@ -14,7 +14,7 @@ namespace TerritoryPlugin.Services
 {
     public class CaptureZoneService
     {
-        private readonly CaptureZoneConfiguration m_Configuration;
+        private CaptureZoneConfiguration m_Configuration;
         private readonly IFactionService m_FactionService;
         private readonly List<CaptureZoneRuntime> m_CaptureZones = new List<CaptureZoneRuntime>();
         private readonly object m_stateLock = new object();
@@ -46,21 +46,36 @@ namespace TerritoryPlugin.Services
         }
 
 
-        public CaptureZoneService(IConfiguration configuration, 
+        public CaptureZoneService(
         IFactionService factionService, 
         ILogger<CaptureZoneService> logger,
         Lazy<IPluginAccessor<TerritoryPlugin>> pluginAccessor)
         {
             m_Configuration = new CaptureZoneConfiguration();
-            configuration.Bind(m_Configuration);
             m_FactionService = factionService;
             m_Logger = logger;
             m_PluginAccessor = pluginAccessor;
         }
 
+        public void SetConfiguration(CaptureZoneConfiguration configuration)
+        {
+            m_Configuration = configuration;
+        }
+
         public async UniTask StartAsync(CancellationToken cancellationToken)
         {
             m_Logger.LogInformation("Starting capture zone service.");
+            
+            // Load preset zones from configuration
+            if (m_Configuration?.Zones != null)
+            {
+                foreach (var zone in m_Configuration.Zones)
+                {
+                    AddCaptureZone(zone);
+                    m_Logger.LogInformation("Loaded preset zone: {Zone}", zone.Name);
+                }
+            }
+            
             await LoadFactionRewardsAsync();
             while (!cancellationToken.IsCancellationRequested)
             {

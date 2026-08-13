@@ -9,6 +9,8 @@ using OpenMod.Core.Plugins;
 using OpenMod.API.Plugins;
 using TerritoryPlugin.Services;
 using SDG.Unturned;
+using TerritoryPlugin.Models;
+using System.Collections.Generic;
 
 // For more, visit https://openmod.github.io/openmod-docs/devdoc/guides/getting-started.html
 
@@ -33,6 +35,23 @@ namespace TerritoryPlugin
             m_StringLocalizer = stringLocalizer;
             m_Logger = logger;
             m_CaptureZoneService = captureZoneService;
+            
+            var section = configuration.GetSection("capture_zones");
+            
+            var zoneConfig = new CaptureZoneConfiguration
+            {
+                TimeZoneId = section["time_zone_id"] ?? "America/Santiago",
+                ScoringStart = section["scoring_start"] ?? "18:30",
+                ScoringEnd = section["scoring_end"] ?? "19:00",
+                Zones = section.GetSection("zones").Get<List<CaptureZone>>() ?? new List<CaptureZone>()
+            };
+            
+            m_Logger.LogInformation(
+                "Loaded config - TimeZone: {TZ}, Start: {Start}, End: {End}, Zones: {Count}",
+                zoneConfig.TimeZoneId, zoneConfig.ScoringStart, zoneConfig.ScoringEnd, zoneConfig.Zones.Count);
+            m_Logger.LogInformation(m_Configuration["test:string"]);
+            
+            m_CaptureZoneService.SetConfiguration(zoneConfig);
         }
 
         protected override Task OnLoadAsync()

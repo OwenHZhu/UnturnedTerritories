@@ -30,7 +30,7 @@ namespace TerritoryPlugin.Commands
 
             if (Context.Parameters.Length == 0)
             {
-                throw new CommandWrongUsageException("Usage: /zone set|status|info");
+                throw new CommandWrongUsageException("Usage: /zone set|status|remove|list");
             }
 
             string action = Context.Parameters[0].ToLower();
@@ -139,6 +139,28 @@ namespace TerritoryPlugin.Commands
                 {
                     throw new UserFriendlyException("Failed to move the capture zone");
                 }
+                return;
+            }
+
+            if (action == "list")
+            {
+                var zones = m_CaptureZoneService.CaptureZonesList;
+                
+                if (zones.Count == 0)
+                {
+                    await player.PrintMessageAsync("No capture zones are currently active.");
+                    return;
+                }
+
+                await player.PrintMessageAsync($"=== Active Capture Zones ({zones.Count}) ===");
+                
+                foreach (var zoneRuntime in zones)
+                {
+                    var zone = zoneRuntime.Definition;
+                    await player.PrintMessageAsync(
+                        $"• {zone.Name} | Center: ({zone.X:F1}, {zone.Y:F1}, {zone.Z:F1}) | Radius: {zone.Radius:F0}m | Weight: {zone.Weight} | State: {zoneRuntime.State}");
+                }
+                
                 return;
             }
         }

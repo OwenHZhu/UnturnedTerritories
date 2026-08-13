@@ -22,3 +22,6 @@ capture_zones:
       z: 0.0
       radius: 100.0
       weight: 3
+
+test:
+  string: "AMONG US"
