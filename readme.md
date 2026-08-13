@@ -5,16 +5,17 @@ Unturned plugin for faction style Domination gameplay
 Install OpenMod and ask Developer(Tre Munet) for up to date dll
 
 ## Commands
-"|" means "or", choose one of these arguments
+"|" means "or", choose one of these arguments  
 
-/faction create|remove|delete|list
-/territory claim|info
-/zone set|status|remove|list
+
+/faction create|remove|delete|list  
+/territory claim|info  
+/zone set|status|remove|list  
 
 
 ## Documentation
 
-Search for *Config.Yaml* in SteamLibrary\steamapps\common\U3DS\Servers\Default\OpenMod\plugins\TerritoryPlugin
+Search for *Config.Yaml* in SteamLibrary\steamapps\common\U3DS\Servers\Default\OpenMod\plugins\TerritoryPlugin  
 ```yaml
 capture_zones:
   time_zone_id: "America/Santiago" # This field is ignored for the time being
@@ -42,11 +43,11 @@ pvp_schedule:                # Pvp window
 
 ## Server Announcements
 
-This plugin is accompanied by Wild.Announcer, a separate plugin configured to run server announcements.
-Install from the server terminal by running: 'openmod install Wild.Announcer'
-Search for *Config.Yaml* in SteamLibrary\steamapps\common\U3DS\Servers\Default\OpenMod\plugins\Wild.Announcer
+This plugin is accompanied by Wild.Announcer, a separate plugin configured to run server announcements.  
+Install from the server terminal by running: 'openmod install Wild.Announcer'  
+Search for *Config.Yaml* in SteamLibrary\steamapps\common\U3DS\Servers\Default\OpenMod\plugins\Wild.Announcer  
 
-Replace the entire config with the following:
+Replace the entire config with the following:  
 ```yaml
 Interval: 500 # Seconds between each announcement - Must be an int value
 Random-Enabled: true # If announcements should be random and not by order - Must be a boolean value
