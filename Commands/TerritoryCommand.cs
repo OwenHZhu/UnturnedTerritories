@@ -36,7 +36,7 @@ namespace TerritoryPlugin.Commands
             if (Context.Parameters.Length == 0)
             {
                 await player.PrintMessageAsync(
-                    "Usage: /territory claim|info|leaderboard");
+                    "Usage: /territory claim|info");
 
                 return;
             }
@@ -136,7 +136,7 @@ namespace TerritoryPlugin.Commands
             }
 
             await player.PrintMessageAsync(
-                "Unknown subcommand. Use /territory claim|info|leaderboard");
+                "Unknown subcommand. Use /territory claim|info");
         }
     }
 }

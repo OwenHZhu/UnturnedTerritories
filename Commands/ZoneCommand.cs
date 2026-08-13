@@ -39,23 +39,42 @@ namespace TerritoryPlugin.Commands
             {
                 if (Context.Parameters.Length < 3)
                 {
-                    throw new CommandWrongUsageException("Usage: /zone set <name> <radius>");
+                    throw new CommandWrongUsageException("Usage: /zone set <name> <radius> [x] [y] [z]");
                 }
 
                 string zoneName = Context.Parameters[1];
                 if (!float.TryParse(Context.Parameters[2], out float radius))
                 {
-                    throw new CommandWrongUsageException("Usage: /zone set <name> <radius>");
+                    throw new CommandWrongUsageException("Usage: /zone set <name> <radius> [x] [y] [z]");
                 }
 
-                Vector3 position = player.Player.Player.transform.position;
+                float x, y, z;
+                
+                // Check if coordinates are provided
+                if (Context.Parameters.Length >= 6)
+                {
+                    if (!float.TryParse(Context.Parameters[3], out x) ||
+                        !float.TryParse(Context.Parameters[4], out y) ||
+                        !float.TryParse(Context.Parameters[5], out z))
+                    {
+                        throw new CommandWrongUsageException("Usage: /zone set <name> <radius> [x] [y] [z]");
+                    }
+                }
+                else
+                {
+                    // Use player's current position
+                    Vector3 position = player.Player.Player.transform.position;
+                    x = position.x;
+                    y = position.y;
+                    z = position.z;
+                }
 
                 var zone = new CaptureZone
                 {
                     Name = zoneName,
-                    X = position.x,
-                    Y = position.y,
-                    Z = position.z,
+                    X = x,
+                    Y = y,
+                    Z = z,
                     Radius = radius
                 };
 

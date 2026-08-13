@@ -262,6 +262,18 @@ namespace TerritoryPlugin.Services
             if (zone.State != CaptureState.Scoring)
             {
                 StartScoringRound(zone);
+                foreach (SteamPlayer client in Provider.clients)
+                {
+                    ChatManager.serverSendMessage(
+                        "Zones are now availible for Capture",
+                        Color.green,
+                        null,
+                        client,
+                        EChatMode.SAY,
+                        null,
+                        false
+                    );
+                }
             }
 
             zone.ScoreTickAccumulator += elapsedSeconds;

@@ -18,14 +18,17 @@ namespace TerritoryPlugin.Commands
     public class FactionCommand : UnturnedCommand
     {
         private readonly IFactionService m_FactionService;
+        private readonly CaptureZoneService m_CaptureZoneService;
 
         public FactionCommand(
             IServiceProvider serviceProvider,
             TerritoryService territoryService,
-            IFactionService factionService)
+            IFactionService factionService,
+            CaptureZoneService captureZoneService)
             : base(serviceProvider)
         {
             m_FactionService = factionService;
+            m_CaptureZoneService = captureZoneService;
         }
 
         
@@ -196,7 +199,10 @@ namespace TerritoryPlugin.Commands
                 var names = members.Select(steamId => Provider.clients.FirstOrDefault(p => p.playerID.steamID.m_SteamID == steamId)?
                 .playerID.characterName ?? steamId.ToString()).ToList();
 
-                await player.PrintMessageAsync($"Members of '{factionName}': {string.Join(", ", names)}");
+                var factionRewards = m_CaptureZoneService.FactionRewards;
+                int points = factionRewards.ContainsKey(factionName) ? factionRewards[factionName] : 0;
+
+                await player.PrintMessageAsync($"Members of '{factionName}' (Points: {points}): {string.Join(", ", names)}");
 
             }
         }

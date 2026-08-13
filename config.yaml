@@ -3,3 +3,22 @@ capture_zones:
   scoring_start: "00:00"
   scoring_end: "23:59"
   capture_time: 60
+  zones:
+    - name: "Base North"
+      x: 100.5
+      y: 50.0
+      z: 200.3
+      radius: 75.0
+      weight: 2
+    - name: "Base South"
+      x: -150.2
+      y: 45.0
+      z: -180.5
+      radius: 60.0
+      weight: 1
+    - name: "Center Market"
+      x: 0.0
+      y: 40.0
+      z: 0.0
+      radius: 100.0
+      weight: 3
