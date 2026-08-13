@@ -37,12 +37,17 @@ namespace TerritoryPlugin.Commands
 
             if (action == "set")
             {
-                if (Context.Parameters.Length < 2)
+                if (Context.Parameters.Length < 3)
                 {
-                    throw new CommandWrongUsageException("Usage: /zone set <name>");
+                    throw new CommandWrongUsageException("Usage: /zone set <name> <radius>");
                 }
 
                 string zoneName = Context.Parameters[1];
+                if (!float.TryParse(Context.Parameters[2], out float radius))
+                {
+                    throw new CommandWrongUsageException("Usage: /zone set <name> <radius>");
+                }
+
                 Vector3 position = player.Player.Player.transform.position;
 
                 var zone = new CaptureZone
@@ -51,7 +56,7 @@ namespace TerritoryPlugin.Commands
                     X = position.x,
                     Y = position.y,
                     Z = position.z,
-                    Radius = 50f
+                    Radius = radius
                 };
 
                 m_CaptureZoneService.AddCaptureZone(zone);
@@ -93,6 +98,28 @@ namespace TerritoryPlugin.Commands
                     $"State: {zoneRuntime.State}");
                 await player.PrintMessageAsync(
                     m_CaptureZoneService.GetCurrentZoneScores(zoneRuntime));
+                return;
+            }
+
+            if (action == "remove")
+            {
+                if (Context.Parameters.Length < 2)
+                {
+                    throw new CommandWrongUsageException("Usage: /zone remove <zonename>");
+                }
+
+                string zoneName = Context.Parameters[1];
+                bool removed = m_CaptureZoneService.RemoveCaptureZone(zoneName);
+                if (removed)
+                {
+                    await player.PrintMessageAsync(
+                        $"Capture zone '{zoneName}' removed."
+                    );
+                }
+                else 
+                {
+                    throw new UserFriendlyException("Failed to move the capture zone");
+                }
                 return;
             }
         }

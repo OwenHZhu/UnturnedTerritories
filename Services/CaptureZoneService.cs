@@ -125,6 +125,20 @@ namespace TerritoryPlugin.Services
             }
         }
 
+        public bool RemoveCaptureZone(string zoneName)
+        {
+            lock (m_stateLock)
+            {
+                var zone = m_CaptureZones.FirstOrDefault(z =>
+                    string.Equals(z.Definition.Name, zoneName, StringComparison.OrdinalIgnoreCase));
+
+                if (zone == null)
+                    return false;
+
+                return m_CaptureZones.Remove(zone);
+            }
+        }
+
         public CaptureZoneRuntime? GetCaptureZoneAt(float x, float z)
         {
             foreach (var runtime in m_CaptureZones)
@@ -156,12 +170,14 @@ namespace TerritoryPlugin.Services
         {
             if (zone == null) throw new ArgumentNullException(nameof(zone));
 
+            var header = $"Zone: {zone.Definition.Name}";
+
             if (zone.FactionScores.Count == 0)
             {
-                return "No faction scores have been recorded for this zone yet.";
+                return $"{header}{Environment.NewLine}No faction scores have been recorded for this zone yet.";
             }
 
-            return string.Join(Environment.NewLine,
+            return $"{header}{Environment.NewLine}" + string.Join(Environment.NewLine,
                 zone.FactionScores
                     .OrderByDescending(kvp => kvp.Value)
                     .Select(kvp => $"{kvp.Key}: {kvp.Value}"));
@@ -344,10 +360,28 @@ namespace TerritoryPlugin.Services
                     if (previousZone != null)
                     {
                         m_Logger.LogInformation("{Player} left {Territory}", steamPlayer.playerID.characterName, previousZone.Definition);
+                        ChatManager.serverSendMessage(
+                            $"You have left zone {previousZone.Definition.Name}",
+                            Color.red,
+                            null,
+                            steamPlayer,
+                            EChatMode.SAY,
+                            null,
+                            false
+                        );
                     }
                     if (currentZone != null)
                     {
                         m_Logger.LogInformation("{Player} entered {Territory}", steamPlayer.playerID.characterName, currentZone.Definition);
+                        ChatManager.serverSendMessage(
+                            $"You have entered zone {currentZone.Definition.Name}",
+                            Color.cyan,
+                            null,
+                            steamPlayer,
+                            EChatMode.SAY,
+                            null,
+                            false
+                        );
                     }
                     m_PlayerZones[steamId] = currentZone;
                 }
@@ -356,4 +390,5 @@ namespace TerritoryPlugin.Services
         
         
     }
+
 }

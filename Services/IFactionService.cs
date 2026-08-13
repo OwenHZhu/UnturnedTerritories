@@ -6,6 +6,7 @@ namespace TerritoryPlugin.Services
     public interface IFactionService
     {
         string? GetFactionId(ulong steamId);
+        string? GetFactionName(string factionId);
         void SetFactionId(ulong steamId, string factionId);
         bool RemoveFactionId(ulong steamId);
         IReadOnlyList<ulong> GetFactionMembers(string factionId);

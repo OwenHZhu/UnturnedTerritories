@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using OpenMod.Core.Plugins;
 using OpenMod.API.Plugins;
 using TerritoryPlugin.Services;
+using SDG.Unturned;
 
 // For more, visit https://openmod.github.io/openmod-docs/devdoc/guides/getting-started.html
 
@@ -38,6 +39,7 @@ namespace TerritoryPlugin
         {
             m_Logger.LogInformation(m_StringLocalizer["plugin_events:plugin_start"]);
             m_CaptureZoneService.StartAsync(CancellationToken.None).Forget();
+
             return Task.CompletedTask;
         }
 

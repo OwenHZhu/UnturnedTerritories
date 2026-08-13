@@ -10,5 +10,6 @@ namespace TerritoryPlugin.Models
         public float Z { get; set; }
     
         public float Radius { get; set; } = 100f;
+        public string? FactionId {get; set;}
     }
 }
