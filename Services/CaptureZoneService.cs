@@ -256,7 +256,7 @@ namespace TerritoryPlugin.Services
 
                 UpdateZone(zone, playersPerFaction, scheduleState, 1f);
                 CheckPlayers();
-                m_Logger.LogInformation(GetCurrentZoneScores(zone)); //this line constantly outputs score of zone
+                //m_Logger.LogInformation(GetCurrentZoneScores(zone)); //this line constantly outputs score of zone
             }
         }
 

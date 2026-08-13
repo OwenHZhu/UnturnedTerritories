@@ -23,18 +23,21 @@ namespace TerritoryPlugin
         private readonly IStringLocalizer m_StringLocalizer;
         private readonly ILogger<TerritoryPlugin> m_Logger;
         private readonly CaptureZoneService m_CaptureZoneService;
+        private readonly PvpScheduleService m_PvpScheduleService;
 
         public TerritoryPlugin(
             IConfiguration configuration, 
             IStringLocalizer stringLocalizer,
             ILogger<TerritoryPlugin> logger, 
             CaptureZoneService captureZoneService,
+            PvpScheduleService pvpScheduleService,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             m_Configuration = configuration;
             m_StringLocalizer = stringLocalizer;
             m_Logger = logger;
             m_CaptureZoneService = captureZoneService;
+            m_PvpScheduleService = pvpScheduleService;
             
             var section = configuration.GetSection("capture_zones");
             
@@ -45,11 +48,17 @@ namespace TerritoryPlugin
                 ScoringEnd = section["scoring_end"] ?? "19:00",
                 Zones = section.GetSection("zones").Get<List<CaptureZone>>() ?? new List<CaptureZone>()
             };
+
+            var pvpSection = configuration.GetSection("pvp_schedule");
+            var pvpConfig = new PvpScheduleConfiguration
+            {
+                EnabledStart = pvpSection["enabled_start"] ?? "00:00",
+                EnabledEnd = pvpSection["enabled_start"] ?? "23:59"
+            };
             
             m_Logger.LogInformation(
                 "Loaded config - TimeZone: {TZ}, Start: {Start}, End: {End}, Zones: {Count}",
                 zoneConfig.TimeZoneId, zoneConfig.ScoringStart, zoneConfig.ScoringEnd, zoneConfig.Zones.Count);
-            m_Logger.LogInformation(m_Configuration["test:string"]);
             
             m_CaptureZoneService.SetConfiguration(zoneConfig);
         }
@@ -58,6 +67,7 @@ namespace TerritoryPlugin
         {
             m_Logger.LogInformation(m_StringLocalizer["plugin_events:plugin_start"]);
             m_CaptureZoneService.StartAsync(CancellationToken.None).Forget();
+            m_PvpScheduleService.StartAsync(CancellationToken.None).Forget();
 
             return Task.CompletedTask;
         }
