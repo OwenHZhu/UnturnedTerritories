@@ -348,8 +348,7 @@ namespace TerritoryPlugin.Services
 
             if (leadingFaction == null || isTie)
             {
-                m_Logger.LogInformation(
-                    "Capture zone {zone} ended with no winner.", zone.Definition.Name);
+                m_Logger.LogInformation("Capture zone {zone} ended with no winner.", zone.Definition.Name);
                 return;
             }
 

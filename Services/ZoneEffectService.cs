@@ -20,8 +20,7 @@ namespace TerritoryPlugin.Services
         private readonly CaptureZoneService m_CaptureZoneService;
         private readonly ILogger<ZoneEffectService> m_Logger;
 
-        private readonly Dictionary<string, List<Vector3>> m_RingPointCache =
-            new Dictionary<string, List<Vector3>>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<Vector3>> m_RingPointCache = new Dictionary<string, List<Vector3>>(StringComparer.OrdinalIgnoreCase);
 
         private EffectAsset? m_RingEffectAsset;
         private float m_RefreshIntervalSeconds = 1.5f;
@@ -47,61 +46,55 @@ namespace TerritoryPlugin.Services
                 refreshIntervalSeconds);
         }
 
-public async UniTask StartAsync(CancellationToken cancellationToken)
-{
-    m_Logger.LogInformation("Starting zone effect service.");
-
-    await UniTask.SwitchToMainThread();
-
-    // Wait for Unturned's asset system to become available.
-    while (!cancellationToken.IsCancellationRequested)
-    {
-        try
+        public async UniTask StartAsync(CancellationToken cancellationToken)
         {
-            m_RingEffectAsset =
-                Assets.find(EAssetType.EFFECT, m_RingEffectId) as EffectAsset;
+            m_Logger.LogInformation("Starting zone effect service.");
 
-            if (m_RingEffectAsset != null)
+            await UniTask.SwitchToMainThread();
+
+            // Wait for Unturned's asset system to become available.
+            while (!cancellationToken.IsCancellationRequested)
             {
-                break;
+                try
+                {
+                    m_RingEffectAsset =
+                        Assets.find(EAssetType.EFFECT, m_RingEffectId) as EffectAsset;
+
+                    if (m_RingEffectAsset != null)
+                    {
+                        break;
+                    }
+
+                    m_Logger.LogWarning("Ring effect {EffectId} is not available yet. Retrying...", m_RingEffectId);
+                }
+                catch (NullReferenceException)
+                {
+                    m_Logger.LogDebug("Unturned asset system is not ready yet. Retrying...");
+                }
+
+                await UniTask.Delay(
+                    TimeSpan.FromSeconds(1),
+                    cancellationToken: cancellationToken);
+
+                await UniTask.SwitchToMainThread();
             }
 
-            m_Logger.LogWarning(
-                "Ring effect {EffectId} is not available yet. Retrying...",
-                m_RingEffectId);
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            m_Logger.LogInformation("Loaded ring effect: ID={EffectId}, Name={Name}", m_RingEffectId, m_RingEffectAsset!.name);
+
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await RefreshZoneRingsAsync();
+
+                await UniTask.Delay(
+                    TimeSpan.FromSeconds(m_RefreshIntervalSeconds),
+                    cancellationToken: cancellationToken);
+            }
         }
-        catch (NullReferenceException)
-        {
-            m_Logger.LogDebug(
-                "Unturned asset system is not ready yet. Retrying...");
-        }
-
-        await UniTask.Delay(
-            TimeSpan.FromSeconds(1),
-            cancellationToken: cancellationToken);
-
-        await UniTask.SwitchToMainThread();
-    }
-
-    if (cancellationToken.IsCancellationRequested)
-    {
-        return;
-    }
-
-    m_Logger.LogInformation(
-        "Loaded ring effect: ID={EffectId}, Name={Name}",
-        m_RingEffectId,
-        m_RingEffectAsset!.name);
-
-    while (!cancellationToken.IsCancellationRequested)
-    {
-        await RefreshZoneRingsAsync();
-
-        await UniTask.Delay(
-            TimeSpan.FromSeconds(m_RefreshIntervalSeconds),
-            cancellationToken: cancellationToken);
-    }
-}
 
         private async UniTask RefreshZoneRingsAsync()
         {
@@ -112,20 +105,8 @@ public async UniTask StartAsync(CancellationToken cancellationToken)
 
             await UniTask.SwitchToMainThread();
 
-            m_Logger.LogInformation(
-                "Refreshing zone rings: {Count} zones",
-                m_CaptureZoneService.CaptureZonesList.Count);
-
             foreach (CaptureZoneRuntime zone in m_CaptureZoneService.CaptureZonesList)
             {
-                m_Logger.LogInformation(
-                    "Spawning ring: {Name} | Center=({X}, {Y}, {Z}) | Radius={Radius}",
-                    zone.Definition.Name,
-                    zone.Definition.X,
-                    zone.Definition.Y,
-                    zone.Definition.Z,
-                    zone.Definition.Radius);
-
                 List<Vector3> ringPoints = GetOrBuildRingPoints(zone);
 
                 foreach (Vector3 point in ringPoints)
@@ -133,7 +114,7 @@ public async UniTask StartAsync(CancellationToken cancellationToken)
                     var parameters = new TriggerEffectParameters(m_RingEffectAsset)
                     {
                         position = point,
-                        relevantDistance = zone.Definition.Radius + 350f
+                        relevantDistance = zone.Definition.Radius + 900f
                     };
 
                     EffectManager.triggerEffect(parameters);
