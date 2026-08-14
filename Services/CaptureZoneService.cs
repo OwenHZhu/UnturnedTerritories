@@ -211,11 +211,51 @@ namespace TerritoryPlugin.Services
 
         private bool IsCaptureWindowOpen()
         {
-            var currentTime = DateTime.Now.TimeOfDay;
-            var startTime = TimeSpan.Parse(m_Configuration.ScoringStart);
-            var endTime = TimeSpan.Parse(m_Configuration.ScoringEnd);
+            TimeZoneInfo timeZone;
+        
+            try
+            {
+                timeZone = TimeZoneInfo.FindSystemTimeZoneById(
+                    m_Configuration.TimeZoneId
+                );
+            }
+            catch (Exception ex)
+            {
+                m_Logger.LogError(
+                    ex,
+                    "Failed to find timezone: {TimeZoneId}",
+                    m_Configuration.TimeZoneId
+                );
+        
+                return false;
+            }
+        
+            DateTime utcNow = DateTime.UtcNow;
+        
+            DateTime localNow = TimeZoneInfo.ConvertTimeFromUtc(
+                utcNow,
+                timeZone
+            );
+        
+            TimeSpan now = localNow.TimeOfDay;
+            TimeSpan start = TimeSpan.Parse(m_Configuration.ScoringStart);
+            TimeSpan end = TimeSpan.Parse(m_Configuration.ScoringEnd);
+        
+            bool isOpen;
+        
+            if (start <= end)
+            {
+                isOpen = now >= start && now <= end;
+            }
+            else
+            {
+                isOpen = now >= start || now <= end;
+            }
 
-            return currentTime >= startTime && currentTime <= endTime;
+            //diagnostic: timezone debug
+            //m_Logger.LogInformation("TIME DEBUG: UTC={UtcNow}, Local={LocalNow}, TimeZone={TimeZone}, Start={Start}, End={End}, Open={Open}",utcNow,localNow,timeZone.Id,start,end,isOpen);
+        
+            return isOpen;
         }
 
         public void SetCaptureZoneState(CaptureState state)
@@ -228,11 +268,16 @@ namespace TerritoryPlugin.Services
 
         private CaptureState GetCurrentZoneState()
         {
-            if (IsCaptureWindowOpen())
-            {
-                return CaptureState.Scoring;
-            }
-            return CaptureState.Inactive;
+            bool windowOpen = IsCaptureWindowOpen();
+
+            CaptureState state = windowOpen
+                ? CaptureState.Scoring
+                : CaptureState.Inactive;
+
+            //diagnostic: zone schedule check
+            //m_Logger.LogInformation("Zone schedule check: WindowOpen={WindowOpen}, State={State}, Start={Start}, End={End}, TimeZone={TimeZone}",windowOpen,state,m_Configuration.ScoringStart,m_Configuration.ScoringEnd,m_Configuration.TimeZoneId);
+
+            return state;
         }
 
         private void UpdateCaptureZones()
@@ -266,32 +311,74 @@ namespace TerritoryPlugin.Services
                 }
 
                 UpdateZone(zone, playersPerFaction, scheduleState, 1f);
-                CheckPlayers();
+                
                 //m_Logger.LogInformation(GetCurrentZoneScores(zone)); //this line constantly outputs score of zone
             }
+            CheckPlayers();
         }
 
-        private void UpdateZone(CaptureZoneRuntime zone, IReadOnlyDictionary<string, int> playersPerFaction, CaptureState scheduleState, float elapsedSeconds)
+        private void UpdateZone(
+            CaptureZoneRuntime zone,
+            IReadOnlyDictionary<string, int> playersPerFaction,
+            CaptureState scheduleState,
+            float elapsedSeconds)
         {
-            if (GetCurrentZoneState() != CaptureState.Scoring)
+            //diagnostic zone update
+            m_Logger.LogInformation(
+                "UpdateZone ENTER: Zone={Zone}, CurrentState={CurrentState}, ScheduleState={ScheduleState}",
+                zone.Definition.Name,
+                zone.State,
+                scheduleState
+            );
+
+            if (scheduleState != CaptureState.Scoring)
             {
+                //diagnostic zone scoring state
+                m_Logger.LogInformation(
+                    "Zone {Zone}: scheduleState is NOT Scoring. It is {ScheduleState}.",
+                    zone.Definition.Name,
+                    scheduleState
+                );
+
                 if (zone.State == CaptureState.Scoring)
                 {
+                    //diagnostic zone close
+                    m_Logger.LogInformation(
+                        "Zone {Zone}: scoring window closed, finishing zone.",
+                        zone.Definition.Name
+                    );
+
                     FinishZone(zone);
                 }
+
                 if (zone.State != CaptureState.Finished)
                 {
                     zone.State = scheduleState;
                 }
+
                 return;
             }
+            //diagnostic is zone scoring
+            m_Logger.LogInformation(
+                "Zone {Zone}: scheduleState IS SCORING.",
+                zone.Definition.Name
+            );
+
             if (zone.State != CaptureState.Scoring)
             {
+                //diagnostic zone state change
+                m_Logger.LogInformation(
+                    "Changing {Zone} state from {OldState} to Scoring.",
+                    zone.Definition.Name,
+                    zone.State
+                );
+
                 StartScoringRound(zone);
+
                 foreach (SteamPlayer client in Provider.clients)
                 {
                     ChatManager.serverSendMessage(
-                        "Zones are now availible for Capture",
+                        "Zones are now available for Capture",
                         Color.green,
                         null,
                         client,
@@ -301,16 +388,32 @@ namespace TerritoryPlugin.Services
                     );
                 }
             }
+            else
+            {
+                //diagnostic is zone already scoring
+                m_Logger.LogInformation(
+                    "Zone {Zone} is ALREADY Scoring.",
+                    zone.Definition.Name
+                );
+            }
 
             zone.ScoreTickAccumulator += elapsedSeconds;
+
             int wholeSeconds = (int)zone.ScoreTickAccumulator;
+
             if (wholeSeconds > 0)
             {
                 zone.ScoreTickAccumulator -= wholeSeconds;
+
                 foreach (KeyValuePair<string, int> faction in playersPerFaction)
                 {
-                    zone.FactionScores.TryGetValue(faction.Key, out int currentScore);
-                    zone.FactionScores[faction.Key] = currentScore + (faction.Value * wholeSeconds);
+                    zone.FactionScores.TryGetValue(
+                        faction.Key,
+                        out int currentScore
+                    );
+
+                    zone.FactionScores[faction.Key] =
+                        currentScore + (faction.Value * wholeSeconds);
                 }
             }
         }
