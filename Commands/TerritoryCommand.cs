@@ -6,6 +6,7 @@ using OpenMod.Unturned.Commands;
 using OpenMod.Unturned.Users;
 using TerritoryPlugin.Models;
 using TerritoryPlugin.Services;
+using SDG.Unturned;
 using UnityEngine;
 
 namespace TerritoryPlugin.Commands
@@ -136,7 +137,9 @@ namespace TerritoryPlugin.Commands
             }
 
             await player.PrintMessageAsync(
-                "Unknown subcommand. Use /territory claim|info");
-        }
+                "Unknown subcommand. Use /territory claim|info");        
+                
+                   
+        }       
     }
 }

@@ -14,7 +14,7 @@ namespace TerritoryPlugin.Services
             serviceCollection.AddSingleton<CaptureZoneService>();
             serviceCollection.AddSingleton<IFactionService, FactionService>();
             serviceCollection.AddSingleton<PvpScheduleService>();
-            serviceCollection.AddSingleton<CaptureZoneEffectService>();
+            serviceCollection.AddSingleton<ZoneEffectService>();
         }
     }
 }

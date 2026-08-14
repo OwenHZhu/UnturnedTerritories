@@ -2,13 +2,19 @@ capture_zones:
   time_zone_id: "America/Santiago"
   scoring_start: "00:00"
   scoring_end: "23:59"
-  capture_time: 60
+  RingEffectId: 130
+  RingRefreshIntervalSeconds: 2
+  boundary:
+    enabled: true
+    effect_count: 20
+    height_offset: 0.1
+    
   zones:
-    - name: "Base North"
-      x: 100.5
-      y: 50.0
-      z: 200.3
-      radius: 75.0
+    - name: "Beach"
+      x: 283
+      y: 28
+      z: -536
+      radius: 10.0
       weight: 2
     - name: "Base South"
       x: -150.2

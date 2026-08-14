@@ -81,6 +81,7 @@ namespace TerritoryPlugin.Services
             {
                 m_Territories.Add(territory);
             }
+            
 
             SaveAsync().Forget();
         }
@@ -146,6 +147,7 @@ namespace TerritoryPlugin.Services
                 }
 
                 m_Logger.LogInformation("Loaded {Count} territories.", saved.Territories.Count);
+
             }
             catch (Exception ex)
             {

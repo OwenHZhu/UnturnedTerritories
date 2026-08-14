@@ -24,7 +24,9 @@ namespace TerritoryPlugin
         private readonly ILogger<TerritoryPlugin> m_Logger;
         private readonly CaptureZoneService m_CaptureZoneService;
         private readonly PvpScheduleService m_PvpScheduleService;
-        private readonly CaptureZoneEffectService m_CaptureZoneEffectService;
+        private readonly ZoneEffectService m_CaptureZoneEffectService;
+
+        private readonly CancellationTokenSource m_LifetimeCts = new CancellationTokenSource();
 
         public TerritoryPlugin(
             IConfiguration configuration, 
@@ -32,7 +34,7 @@ namespace TerritoryPlugin
             ILogger<TerritoryPlugin> logger, 
             CaptureZoneService captureZoneService,
             PvpScheduleService pvpScheduleService,
-            CaptureZoneEffectService captureZoneEffectService,
+            ZoneEffectService captureZoneEffectService,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             m_Configuration = configuration;
@@ -43,50 +45,58 @@ namespace TerritoryPlugin
             m_CaptureZoneEffectService = captureZoneEffectService;
             
             var section = configuration.GetSection("capture_zones");
-            
+
+            //debugging
+            //
+            //
+            m_Logger.LogInformation(
+                "DEBUG ring_effect_id raw value = '{Value}'",
+                section["ring_effect_id"] ?? "NULL");
+            //
+            //
+            //
+
+            ushort ringEffectId = ushort.TryParse(section["ring_effect_id"], out var parsedEffectId)
+                ? parsedEffectId
+                : (ushort)0;
+            float ringRefreshIntervalSeconds = float.TryParse(section["ring_refresh_interval_seconds"], out var parsedInterval)
+                ? parsedInterval
+                : 4f;
+
             var zoneConfig = new CaptureZoneConfiguration
             {
                 TimeZoneId = section["time_zone_id"] ?? "America/Santiago",
                 ScoringStart = section["scoring_start"] ?? "18:30",
                 ScoringEnd = section["scoring_end"] ?? "19:00",
-                Zones = section.GetSection("zones").Get<List<CaptureZone>>() ?? new List<CaptureZone>()
+                Zones = section.GetSection("zones").Get<List<CaptureZone>>() ?? new List<CaptureZone>(),
+                RingEffectId = ringEffectId,
+                RingRefreshIntervalSeconds = ringRefreshIntervalSeconds
             };
 
             var pvpSection = configuration.GetSection("pvp_schedule");
             var pvpConfig = new PvpScheduleConfiguration
             {
                 EnabledStart = pvpSection["enabled_start"] ?? "00:00",
-                EnabledEnd = pvpSection["enabled_start"] ?? "23:59"
+                EnabledEnd = pvpSection["enabled_end"] ?? "23:59"
             };
             
             m_Logger.LogInformation(
-                "Loaded config - TimeZone: {TZ}, Start: {Start}, End: {End}, Zones: {Count}",
-                zoneConfig.TimeZoneId, zoneConfig.ScoringStart, zoneConfig.ScoringEnd, zoneConfig.Zones.Count);
+                "Loaded config - TimeZone: {TZ}, Start: {Start}, End: {End}, Zones: {Count}, RingEffectId: {EffectId}",
+                zoneConfig.TimeZoneId, zoneConfig.ScoringStart, zoneConfig.ScoringEnd, zoneConfig.Zones.Count, zoneConfig.RingEffectId);
             
             m_CaptureZoneService.SetConfiguration(zoneConfig);
             m_PvpScheduleService.SetConfiguration(pvpConfig);
+            m_CaptureZoneEffectService.Configure(zoneConfig.RingEffectId, zoneConfig.RingRefreshIntervalSeconds);
         }
 
         protected override Task OnLoadAsync()
         {
             m_Logger.LogInformation(m_StringLocalizer["plugin_events:plugin_start"]);
             m_Logger.LogInformation("TerritoryPlugin Onloaded");
-            m_CaptureZoneService.StartAsync(CancellationToken.None).Forget();
-            m_PvpScheduleService.StartAsync(CancellationToken.None).Forget();
 
-            Guid guid = new Guid("8fe95f79ff0441348658bd9679492df6");
-            var effect = Assets.FindEffectAssetByGuidOrLegacyId(guid, 5000);
-
-            if (effect == null)
-            {
-                Logger.LogError("Effect 5000 was NOT found.");
-            }
-            else
-            {
-                Logger.LogInformation(
-                    $"Effect 5000 FOUND: {effect.name}, GUID={effect.GUID}"
-                );
-            }           
+            m_CaptureZoneService.StartAsync(m_LifetimeCts.Token).Forget();
+            m_PvpScheduleService.StartAsync(m_LifetimeCts.Token).Forget();
+            m_CaptureZoneEffectService.StartAsync(m_LifetimeCts.Token).Forget();
 
             return Task.CompletedTask;
         }
@@ -94,6 +104,7 @@ namespace TerritoryPlugin
         protected override Task OnUnloadAsync()
         {
             m_Logger.LogInformation(m_StringLocalizer["plugin_events:plugin_stop"]);
+            m_LifetimeCts.Cancel();
             return Task.CompletedTask;
         }
     }
