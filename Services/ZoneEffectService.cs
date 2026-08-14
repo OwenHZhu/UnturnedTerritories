@@ -47,38 +47,61 @@ namespace TerritoryPlugin.Services
                 refreshIntervalSeconds);
         }
 
-        public async UniTask StartAsync(CancellationToken cancellationToken)
+public async UniTask StartAsync(CancellationToken cancellationToken)
+{
+    m_Logger.LogInformation("Starting zone effect service.");
+
+    await UniTask.SwitchToMainThread();
+
+    // Wait for Unturned's asset system to become available.
+    while (!cancellationToken.IsCancellationRequested)
+    {
+        try
         {
-            m_Logger.LogInformation("Starting zone effect service.");
-        
-            await UniTask.SwitchToMainThread();
-        
             m_RingEffectAsset =
                 Assets.find(EAssetType.EFFECT, m_RingEffectId) as EffectAsset;
-        
-            if (m_RingEffectAsset == null)
+
+            if (m_RingEffectAsset != null)
             {
-                m_Logger.LogWarning(
-                    "Ring effect id {EffectId} was not found.",
-                    m_RingEffectId);
-        
-                return;
+                break;
             }
-        
-            m_Logger.LogInformation(
-                "Loaded ring effect: ID={EffectId}, Name={Name}",
-                m_RingEffectId,
-                m_RingEffectAsset.name);
-        
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                await RefreshZoneRingsAsync();
-        
-                await UniTask.Delay(
-                    TimeSpan.FromSeconds(m_RefreshIntervalSeconds),
-                    cancellationToken: cancellationToken);
-            }
+
+            m_Logger.LogWarning(
+                "Ring effect {EffectId} is not available yet. Retrying...",
+                m_RingEffectId);
         }
+        catch (NullReferenceException)
+        {
+            m_Logger.LogDebug(
+                "Unturned asset system is not ready yet. Retrying...");
+        }
+
+        await UniTask.Delay(
+            TimeSpan.FromSeconds(1),
+            cancellationToken: cancellationToken);
+
+        await UniTask.SwitchToMainThread();
+    }
+
+    if (cancellationToken.IsCancellationRequested)
+    {
+        return;
+    }
+
+    m_Logger.LogInformation(
+        "Loaded ring effect: ID={EffectId}, Name={Name}",
+        m_RingEffectId,
+        m_RingEffectAsset!.name);
+
+    while (!cancellationToken.IsCancellationRequested)
+    {
+        await RefreshZoneRingsAsync();
+
+        await UniTask.Delay(
+            TimeSpan.FromSeconds(m_RefreshIntervalSeconds),
+            cancellationToken: cancellationToken);
+    }
+}
 
         private async UniTask RefreshZoneRingsAsync()
         {
@@ -89,9 +112,22 @@ namespace TerritoryPlugin.Services
 
             await UniTask.SwitchToMainThread();
 
+            m_Logger.LogInformation(
+                "Refreshing zone rings: {Count} zones",
+                m_CaptureZoneService.CaptureZonesList.Count);
+
             foreach (CaptureZoneRuntime zone in m_CaptureZoneService.CaptureZonesList)
             {
+                m_Logger.LogInformation(
+                    "Spawning ring: {Name} | Center=({X}, {Y}, {Z}) | Radius={Radius}",
+                    zone.Definition.Name,
+                    zone.Definition.X,
+                    zone.Definition.Y,
+                    zone.Definition.Z,
+                    zone.Definition.Radius);
+
                 List<Vector3> ringPoints = GetOrBuildRingPoints(zone);
+
                 foreach (Vector3 point in ringPoints)
                 {
                     var parameters = new TriggerEffectParameters(m_RingEffectAsset)
@@ -124,7 +160,7 @@ namespace TerritoryPlugin.Services
                 float angle = i / (float)RingPointCount * Mathf.PI * 2f;
                 float pointX = centerX + Mathf.Cos(angle) * radius;
                 float pointZ = centerZ + Mathf.Sin(angle) * radius;
-                float pointY = ResolveGroundHeight(pointX, pointZ);
+                float pointY = zone.Definition.Y + 0.1f;
 
                 points.Add(new Vector3(pointX, pointY, pointZ));
                 m_Logger.LogInformation("Ring point {Index}: X={X}, Y={Y}, Z={Z}",i,pointX,pointY,pointZ);

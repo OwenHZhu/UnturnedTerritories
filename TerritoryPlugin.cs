@@ -96,7 +96,14 @@ namespace TerritoryPlugin
 
             m_CaptureZoneService.StartAsync(m_LifetimeCts.Token).Forget();
             m_PvpScheduleService.StartAsync(m_LifetimeCts.Token).Forget();
-            m_CaptureZoneEffectService.StartAsync(m_LifetimeCts.Token).Forget();
+m_CaptureZoneEffectService
+    .StartAsync(m_LifetimeCts.Token)
+    .Forget(ex =>
+    {
+        m_Logger.LogError(
+            ex,
+            "Zone effect service crashed.");
+    });
 
             return Task.CompletedTask;
         }
