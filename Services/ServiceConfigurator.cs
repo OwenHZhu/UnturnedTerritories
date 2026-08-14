@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using OpenMod.API.Ioc;
+using TerritoryPlugin.Models;
 
 namespace TerritoryPlugin.Services
 {
@@ -12,6 +13,8 @@ namespace TerritoryPlugin.Services
             serviceCollection.AddSingleton<TerritoryService>();
             serviceCollection.AddSingleton<CaptureZoneService>();
             serviceCollection.AddSingleton<IFactionService, FactionService>();
+            serviceCollection.AddSingleton<PvpScheduleService>();
+            serviceCollection.AddSingleton<CaptureZoneEffectService>();
         }
     }
 }

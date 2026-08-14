@@ -24,6 +24,7 @@ namespace TerritoryPlugin
         private readonly ILogger<TerritoryPlugin> m_Logger;
         private readonly CaptureZoneService m_CaptureZoneService;
         private readonly PvpScheduleService m_PvpScheduleService;
+        private readonly CaptureZoneEffectService m_CaptureZoneEffectService;
 
         public TerritoryPlugin(
             IConfiguration configuration, 
@@ -31,6 +32,7 @@ namespace TerritoryPlugin
             ILogger<TerritoryPlugin> logger, 
             CaptureZoneService captureZoneService,
             PvpScheduleService pvpScheduleService,
+            CaptureZoneEffectService captureZoneEffectService,
             IServiceProvider serviceProvider) : base(serviceProvider)
         {
             m_Configuration = configuration;
@@ -38,6 +40,7 @@ namespace TerritoryPlugin
             m_Logger = logger;
             m_CaptureZoneService = captureZoneService;
             m_PvpScheduleService = pvpScheduleService;
+            m_CaptureZoneEffectService = captureZoneEffectService;
             
             var section = configuration.GetSection("capture_zones");
             
@@ -61,13 +64,29 @@ namespace TerritoryPlugin
                 zoneConfig.TimeZoneId, zoneConfig.ScoringStart, zoneConfig.ScoringEnd, zoneConfig.Zones.Count);
             
             m_CaptureZoneService.SetConfiguration(zoneConfig);
+            m_PvpScheduleService.SetConfiguration(pvpConfig);
         }
 
         protected override Task OnLoadAsync()
         {
             m_Logger.LogInformation(m_StringLocalizer["plugin_events:plugin_start"]);
+            m_Logger.LogInformation("TerritoryPlugin Onloaded");
             m_CaptureZoneService.StartAsync(CancellationToken.None).Forget();
             m_PvpScheduleService.StartAsync(CancellationToken.None).Forget();
+
+            Guid guid = new Guid("8fe95f79ff0441348658bd9679492df6");
+            var effect = Assets.FindEffectAssetByGuidOrLegacyId(guid, 5000);
+
+            if (effect == null)
+            {
+                Logger.LogError("Effect 5000 was NOT found.");
+            }
+            else
+            {
+                Logger.LogInformation(
+                    $"Effect 5000 FOUND: {effect.name}, GUID={effect.GUID}"
+                );
+            }           
 
             return Task.CompletedTask;
         }

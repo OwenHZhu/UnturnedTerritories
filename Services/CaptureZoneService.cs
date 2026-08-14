@@ -20,6 +20,8 @@ namespace TerritoryPlugin.Services
         private readonly object m_stateLock = new object();
         private readonly ILogger<CaptureZoneService> m_Logger;
         private readonly Dictionary<ulong, CaptureZoneRuntime?> m_PlayerZones = new Dictionary<ulong, CaptureZoneRuntime?>();
+        private const int CaptureZoneEffectCount = 48;
+        private readonly Dictionary<string, List<Transform>> m_ZoneEffects = new Dictionary<string, List<Transform>>(StringComparer.OrdinalIgnoreCase);
         public IReadOnlyList<CaptureZoneRuntime> CaptureZonesList
         {
             get
@@ -65,7 +67,7 @@ namespace TerritoryPlugin.Services
         public async UniTask StartAsync(CancellationToken cancellationToken)
         {
             m_Logger.LogInformation("Starting capture zone service.");
-            
+
             // Load preset zones from configuration
             if (m_Configuration?.Zones != null)
             {
@@ -142,16 +144,25 @@ namespace TerritoryPlugin.Services
 
         public bool RemoveCaptureZone(string zoneName)
         {
+            CaptureZoneRuntime? zone;
+
             lock (m_stateLock)
             {
-                var zone = m_CaptureZones.FirstOrDefault(z =>
-                    string.Equals(z.Definition.Name, zoneName, StringComparison.OrdinalIgnoreCase));
+                zone = m_CaptureZones.FirstOrDefault(z =>
+                    string.Equals(
+                        z.Definition.Name,
+                        zoneName,
+                        StringComparison.OrdinalIgnoreCase));
 
                 if (zone == null)
+                {
                     return false;
+                }
 
-                return m_CaptureZones.Remove(zone);
+                m_CaptureZones.Remove(zone);
             }
+
+            return true;
         }
 
         public CaptureZoneRuntime? GetCaptureZoneAt(float x, float z)
@@ -414,8 +425,8 @@ namespace TerritoryPlugin.Services
                 }
             }
         }
-        
-        
+
+
     }
 
 }
