@@ -49,7 +49,7 @@ Search for *Config.Yaml* in SteamLibrary\steamapps\common\U3DS\Servers\Default\O
 
 Replace the entire config with the following:  
 ```yaml
-Interval: 500 # Seconds between each announcement - Must be an int value
+Interval: 200 # Seconds between each announcement - Must be an int value
 Random-Enabled: true # If announcements should be random and not by order - Must be a boolean value
 Prevent-Duplicates: true # If random duplicate announcements should be prevented - Must be a boolean value
 
