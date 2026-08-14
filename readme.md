@@ -18,17 +18,26 @@ Install OpenMod and ask Developer(Tre Munet) for up to date dll
 Search for *Config.Yaml* in SteamLibrary\steamapps\common\U3DS\Servers\Default\OpenMod\plugins\TerritoryPlugin  
 ```yaml
 capture_zones:
-  time_zone_id: "America/Santiago" # This field is ignored for the time being
-  scoring_start: "00:00"           # When Scoring for zones open
-  scoring_end: "23:59"             # When Scoring for zones end
-  capture_time: 60                 # This field is ignored for the time being
-  zones:                           # Use these fields to create preset zones, attributes are self descriptive
-    - name: "Base North"
-      x: 100.5
-      y: 50.0
-      z: 200.3
-      radius: 75.0
+  time_zone_id: "Eastern Standard Time"
+  scoring_start: "13:53"
+  scoring_end: "13:54"
+
+  ring_effect_id: 130
+  ring_refresh_interval_seconds: 2
+
+  boundary:
+    enabled: true
+    effect_count: 20
+    height_offset: 0.1
+
+  zones:
+    - name: "Beach"
+      x: 283
+      y: 28
+      z: -536
+      radius: 10.0
       weight: 2
+
     - name: "Base South"
       x: -150.2
       y: 45.0
@@ -36,9 +45,16 @@ capture_zones:
       radius: 60.0
       weight: 1
 
-pvp_schedule:                # Pvp window
-  enabled_start: "18:00"
-  enabled_end: "20:00"
+    - name: "Center Market"
+      x: 0.0
+      y: 40.0
+      z: 0.0
+      radius: 100.0
+      weight: 3
+
+pvp_schedule:
+  enabled_start: "13:45"
+  enabled_end: "13:48"
 ```
 
 ## Server Announcements
