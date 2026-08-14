@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TerritoryPlugin")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.1.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.1+6166a0b1c70dde473511feb9cf112ffac3f3009b")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.1+2557b8852ffe94becf7af4442b40052b717517fe")]
 [assembly: System.Reflection.AssemblyProductAttribute("Territory Plugin")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TerritoryPlugin")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.1.1.0")]

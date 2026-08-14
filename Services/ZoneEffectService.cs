@@ -50,21 +50,33 @@ namespace TerritoryPlugin.Services
         public async UniTask StartAsync(CancellationToken cancellationToken)
         {
             m_Logger.LogInformation("Starting zone effect service.");
-
-            try
+        
+            await UniTask.SwitchToMainThread();
+        
+            m_RingEffectAsset =
+                Assets.find(EAssetType.EFFECT, m_RingEffectId) as EffectAsset;
+        
+            if (m_RingEffectAsset == null)
             {
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    await RefreshZoneRingsAsync();
-
-                    await UniTask.Delay(
-                        TimeSpan.FromSeconds(m_RefreshIntervalSeconds),
-                        cancellationToken: cancellationToken);
-                }
+                m_Logger.LogWarning(
+                    "Ring effect id {EffectId} was not found.",
+                    m_RingEffectId);
+        
+                return;
             }
-            catch (OperationCanceledException)
+        
+            m_Logger.LogInformation(
+                "Loaded ring effect: ID={EffectId}, Name={Name}",
+                m_RingEffectId,
+                m_RingEffectAsset.name);
+        
+            while (!cancellationToken.IsCancellationRequested)
             {
-                m_Logger.LogInformation("Zone effect service stopped.");
+                await RefreshZoneRingsAsync();
+        
+                await UniTask.Delay(
+                    TimeSpan.FromSeconds(m_RefreshIntervalSeconds),
+                    cancellationToken: cancellationToken);
             }
         }
 
