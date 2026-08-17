@@ -1,38 +1,26 @@
 capture_zones:
   time_zone_id: "Eastern Standard Time"
-  scoring_start: "13:27"
-  scoring_end: "13:28"
+  scoring_start: "13:45"
+  scoring_end: "13:58"
 
   ring_effect_id: 130
   ring_refresh_interval_seconds: 2
 
   boundary:
-    enabled: true
+    enabled: false
     effect_count: 20
     height_offset: 0.1
 
   zones:
-    - name: "Beach"
+    - name: "Configure"
       x: 283
-      y: 28
+      y: 0
       z: -536
       radius: 10.0
       weight: 2
 
-    - name: "Base South"
-      x: -150.2
-      y: 45.0
-      z: -180.5
-      radius: 60.0
-      weight: 1
 
-    - name: "Center Market"
-      x: 0.0
-      y: 40.0
-      z: 0.0
-      radius: 100.0
-      weight: 3
 
 pvp_schedule:
-  enabled_start: "13:27"
-  enabled_end: "13:28"
+  enabled_start: "21:00"
+  enabled_end: "23:59"

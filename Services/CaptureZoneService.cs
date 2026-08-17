@@ -15,6 +15,7 @@ namespace TerritoryPlugin.Services
     public class CaptureZoneService
     {
         private CaptureZoneConfiguration m_Configuration;
+        private bool m_CaptureWindowWasOpen;
         private readonly IFactionService m_FactionService;
         private readonly List<CaptureZoneRuntime> m_CaptureZones = new List<CaptureZoneRuntime>();
         private readonly object m_stateLock = new object();
@@ -36,7 +37,8 @@ namespace TerritoryPlugin.Services
 
         private const string FactionScoresDataKey = "FactionScores";
         private readonly Dictionary<string, int> m_FactionRewards =
-            new Dictionary<string, int>();        public IReadOnlyDictionary<string, int> FactionRewards
+            new Dictionary<string, int>();        
+        public IReadOnlyDictionary<string, int> FactionRewards
         {
             get
             {
@@ -282,6 +284,8 @@ namespace TerritoryPlugin.Services
 
         private void UpdateCaptureZones()
         {
+            UpdateCaptureWindowState();
+
             CaptureState scheduleState = GetCurrentZoneState();
             CaptureZoneRuntime[] zones;
 
@@ -317,6 +321,49 @@ namespace TerritoryPlugin.Services
             CheckPlayers();
         }
 
+        private void UpdateCaptureWindowState()
+        {
+            bool windowIsOpen = IsCaptureWindowOpen();
+
+            // Window just opened
+            if (windowIsOpen && !m_CaptureWindowWasOpen)
+            {
+                m_Logger.LogInformation("Capture window has opened.");
+
+                foreach (SteamPlayer client in Provider.clients)
+                {
+                    ChatManager.serverSendMessage(
+                        "Capture zones are open",
+                        Color.green,
+                        null,
+                        client,
+                        EChatMode.SAY,
+                        null,
+                        false
+                    );
+                }
+            }
+
+            // Window just closed
+            if (!windowIsOpen && m_CaptureWindowWasOpen)
+            {
+                m_Logger.LogInformation("Capture window has closed.");
+                foreach (SteamPlayer client in Provider.clients)
+                {
+                    ChatManager.serverSendMessage(
+                        "Capture zones are now closed",
+                        Color.green,
+                        null,
+                        client,
+                        EChatMode.SAY,
+                        null,
+                        false
+                    );
+                }
+            }
+
+            m_CaptureWindowWasOpen = windowIsOpen;
+        }
         private void UpdateZone(
             CaptureZoneRuntime zone,
             IReadOnlyDictionary<string, int> playersPerFaction,
@@ -324,29 +371,17 @@ namespace TerritoryPlugin.Services
             float elapsedSeconds)
         {
             //diagnostic zone update
-            m_Logger.LogInformation(
-                "UpdateZone ENTER: Zone={Zone}, CurrentState={CurrentState}, ScheduleState={ScheduleState}",
-                zone.Definition.Name,
-                zone.State,
-                scheduleState
-            );
+
 
             if (scheduleState != CaptureState.Scoring)
             {
                 //diagnostic zone scoring state
-                m_Logger.LogInformation(
-                    "Zone {Zone}: scheduleState is NOT Scoring. It is {ScheduleState}.",
-                    zone.Definition.Name,
-                    scheduleState
-                );
+
 
                 if (zone.State == CaptureState.Scoring)
                 {
                     //diagnostic zone close
-                    m_Logger.LogInformation(
-                        "Zone {Zone}: scoring window closed, finishing zone.",
-                        zone.Definition.Name
-                    );
+
 
                     FinishZone(zone);
                 }
@@ -359,42 +394,19 @@ namespace TerritoryPlugin.Services
                 return;
             }
             //diagnostic is zone scoring
-            m_Logger.LogInformation(
-                "Zone {Zone}: scheduleState IS SCORING.",
-                zone.Definition.Name
-            );
+
 
             if (zone.State != CaptureState.Scoring)
             {
                 //diagnostic zone state change
-                m_Logger.LogInformation(
-                    "Changing {Zone} state from {OldState} to Scoring.",
-                    zone.Definition.Name,
-                    zone.State
-                );
+
 
                 StartScoringRound(zone);
-
-                foreach (SteamPlayer client in Provider.clients)
-                {
-                    ChatManager.serverSendMessage(
-                        "Zones are now available for Capture",
-                        Color.green,
-                        null,
-                        client,
-                        EChatMode.SAY,
-                        null,
-                        false
-                    );
-                }
             }
             else
             {
                 //diagnostic is zone already scoring
-                m_Logger.LogInformation(
-                    "Zone {Zone} is ALREADY Scoring.",
-                    zone.Definition.Name
-                );
+
             }
 
             zone.ScoreTickAccumulator += elapsedSeconds;
@@ -451,7 +463,20 @@ namespace TerritoryPlugin.Services
 
             if (leadingFaction == null || isTie)
             {
-                m_Logger.LogInformation("Capture zone {zone} ended with no winner.", zone.Definition.Name);
+                string noWinner = $"Capture {zone.Definition.Name} ended with no winner.";
+                m_Logger.LogInformation(noWinner);
+                foreach (SteamPlayer client in Provider.clients)
+                {
+                    ChatManager.serverSendMessage(
+                        noWinner,
+                        Color.green,
+                        null,
+                        client,
+                        EChatMode.SAY,
+                        null,
+                        false
+                    );
+                }
                 return;
             }
 
@@ -465,13 +490,24 @@ namespace TerritoryPlugin.Services
 
             SaveFactionScoresAsync().Forget();
 
-            m_Logger.LogInformation(
-                "{Faction} won {Zone} with {Score} player-seconds and earned {Reward} points for their faction.",
-                leadingFaction,
-                zone.Definition.Name,
-                leadingScore,
-                zone.Definition.Weight
-            );
+            string resultMessage =
+                $"{leadingFaction} won {zone.Definition.Name} with " +
+                $"{leadingScore} player-seconds and earned " +
+                $"{zone.Definition.Weight} points for their faction.";
+
+            m_Logger.LogInformation(resultMessage);
+            foreach (SteamPlayer client in Provider.clients)
+                {
+                    ChatManager.serverSendMessage(
+                        resultMessage,
+                        Color.green,
+                        null,
+                        client,
+                        EChatMode.SAY,
+                        null,
+                        false
+                    );
+                }
         }
 
         private string? getFactionId(SteamPlayer steamPlayer)
